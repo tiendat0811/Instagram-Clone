@@ -45,9 +45,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
         'description': _descriptionController.text,
         'postImage': postUrl,
         'uid': userInfo["uid"],
-        'username': userInfo["username"],
+        'username': userInfo["name"],
         'userImage': userInfo["photoUrl"],
-        'likes': [],
         'datePublished': DateTime.now().toString(),
       });
       res = 'addPost success';

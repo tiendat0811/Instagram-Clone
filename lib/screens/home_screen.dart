@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:instagram_clone/screens/add_post_screen.dart';
+import 'package:instagram_clone/screens/feed_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -58,52 +59,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-      ),
-      body: PageView(
-        physics: NeverScrollableScrollPhysics(),
-        children: [
-          Text("feed"),
-          Text("search"),
-          AddPostScreen(),
-          Text("noti"),
-          Text("profile"),
-        ],
-        controller: pageController,
-        onPageChanged: onPageChanged,
-      ),
-      bottomNavigationBar: CupertinoTabBar(
-        backgroundColor: mobileBackgroundColor,
-        items: [
-          BottomNavigationBarItem(
-            icon: _page==0 ? Icon(Icons.home, color: primaryColor,): Icon(Icons.home_outlined, color: primaryColor),
-            label: '',
+    return SafeArea(
+      child: Scaffold(
+        body: PageView(
+          physics: NeverScrollableScrollPhysics(),
+          children: <Widget>[
+            FeedScreen(),
+            Text("search"),
+            AddPostScreen(),
+            Text("noti"),
+            Text("profile"),
+          ],
+          controller: pageController,
+          onPageChanged: onPageChanged,
+        ),
+        bottomNavigationBar: CupertinoTabBar(
+          backgroundColor: mobileBackgroundColor,
+          items: [
+            BottomNavigationBarItem(
+              icon: _page==0 ? Icon(Icons.home, color: primaryColor,): Icon(Icons.home_outlined, color: primaryColor),
+              label: '',
 
-          ),
-          BottomNavigationBarItem(
-            icon: _page==1 ? Icon(CupertinoIcons.search, color: primaryColor,):Icon(Icons.search, color: primaryColor),
-            label: '',
-            backgroundColor: primaryColor,
-          ),
-          BottomNavigationBarItem(
-            icon: _page==2 ? Icon(Icons.add_circle, color: primaryColor) : Icon(Icons.add_circle_outline, color: primaryColor),
-            label: '',
-            backgroundColor: primaryColor,
-          ),
-          BottomNavigationBarItem(
-            icon: _page==3 ? Icon(Icons.favorite, color: primaryColor) : Icon(Icons.favorite_outline, color: primaryColor),
-            label: '',
-            backgroundColor: primaryColor,
-          ),
-          BottomNavigationBarItem(
-            icon: _page==4 ? Icon(Icons.person, color: primaryColor) : Icon(Icons.person_outline, color: primaryColor),
-            label: '',
-            backgroundColor: primaryColor,
-          ),
-        ],
-        onTap: NavigationTapped,
+            ),
+            BottomNavigationBarItem(
+              icon: _page==1 ? Icon(CupertinoIcons.search, color: primaryColor,):Icon(Icons.search, color: primaryColor),
+              label: '',
+              backgroundColor: primaryColor,
+            ),
+            BottomNavigationBarItem(
+              icon: _page==2 ? Icon(Icons.add_circle, color: primaryColor) : Icon(Icons.add_circle_outline, color: primaryColor),
+              label: '',
+              backgroundColor: primaryColor,
+            ),
+            BottomNavigationBarItem(
+              icon: _page==3 ? Icon(Icons.favorite, color: primaryColor) : Icon(Icons.favorite_outline, color: primaryColor),
+              label: '',
+              backgroundColor: primaryColor,
+            ),
+            BottomNavigationBarItem(
+              icon: _page==4 ? Icon(Icons.person, color: primaryColor) : Icon(Icons.person_outline, color: primaryColor),
+              label: '',
+              backgroundColor: primaryColor,
+            ),
+          ],
+          onTap: NavigationTapped,
+        ),
       ),
     );
   }

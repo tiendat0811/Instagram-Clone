@@ -33,8 +33,8 @@ class AuthMethods {
           'photoUrl': avatarUrl,
           'email': email,
           'bio': bio,
-          'followers': [],
-          'following': []});
+          'followers': FieldValue.arrayUnion([]),
+          'following': FieldValue.arrayUnion([])});
 
         res = "sign up success";
       }

@@ -28,12 +28,12 @@ class AuthMethods {
         String avatarUrl =
             await StorageMethods().uploadImageToStorage('avatars', file, false);
 
-        DatabaseReference ref = FirebaseDatabase.instance.ref("users/${uid}");
+        DatabaseReference ref = FirebaseDatabase.instance.ref("users/$uid");
         ref.set({'username': username,
           'photoUrl': avatarUrl,
           'email': email,
           'bio': bio,
-          'followers': FieldValue.arrayUnion([]),
+          'followers': [],
           'following': []});
 
         res = "sign up success";

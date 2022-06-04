@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:instagram_clone/utils/colors.dart';
 import 'package:instagram_clone/utils/utils.dart';
-
-import '../resources/auth_methods.dart';
+import '../resources/storage_methods.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({Key? key}) : super(key: key);
@@ -18,16 +18,61 @@ class AddPostScreen extends StatefulWidget {
 
 class _AddPostScreenState extends State<AddPostScreen> {
   final TextEditingController _descriptionController = TextEditingController();
-
+  bool isLoading = false;
   Uint8List? _file;
   Map userInfo = <String, dynamic>{
+    'uid': 'uid',
     'name': '',
     'email': '',
     'photoUrl': '',
     'bio': '',
-    'followers' : '',
-    'following' : ''
+    'followers': '',
+    'following': ''
   };
+
+  void postImage(String uid, String username, String profImage) async {
+    setState(() {
+      isLoading = true;
+    });
+    // start the loading
+    String res = "ERROR";
+    try {
+      String postUrl = await StorageMethods()
+          .uploadImageToStorage('postImages', _file!, true);
+      DatabaseReference ref = FirebaseDatabase.instance.ref("posts/");
+
+      ref.push().set({
+        'description': _descriptionController.text,
+        'postImage': postUrl,
+        'uid': userInfo["uid"],
+        'username': userInfo["username"],
+        'userImage': userInfo["photoUrl"],
+        'likes': [],
+        'datePublished': DateTime.now().toString(),
+      });
+      res = 'addPost success';
+      if (res == "addPost success") {
+        setState(() {
+          isLoading = false;
+        });
+        showSnackBar('Posted!', context);
+        clearImage();
+      } else {
+        showSnackBar(res, context);
+      }
+    } catch (err) {
+      setState(() {
+        isLoading = false;
+      });
+      showSnackBar(err.toString(), context);
+    }
+  }
+
+  void clearImage() {
+    setState(() {
+      _file = null;
+    });
+  }
 
   @override
   void initState() {
@@ -40,15 +85,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
     super.dispose();
   }
 
-  void getUser(){
-    final _database = FirebaseDatabase.instance.ref();
-    _database
-        .child("users/${FirebaseAuth.instance.currentUser!.uid}")
-        .onValue
-        .listen((event) {
-      final data = new Map<String, dynamic>.from(
-          event.snapshot.value as Map<dynamic, dynamic>);
+  void getUser() async{
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+    final ref = FirebaseDatabase.instance.ref();
+    final snapshot = await ref.child('users/$uid').get();
+    if (snapshot.exists) {
+      final data = Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
       setState(() {
+        userInfo.update('uid', (value) => uid);
         userInfo.update('name', (value) => data['username']);
         userInfo.update('email', (value) => data['email']);
         userInfo.update('photoUrl', (value) => data['photoUrl']);
@@ -56,7 +100,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
         userInfo.update('followers', (value) => data['followers']);
         userInfo.update('following', (value) => data['following']);
       });
-    });
+    } else {
+      print('No data available.');
+    }
+
+
+
   }
 
   _selectImage(BuildContext context) async {
@@ -91,7 +140,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
               SimpleDialogOption(
                 padding: const EdgeInsets.all(20),
                 child: const Text("Cancel"),
-                onPressed: () async {
+                onPressed: () {
                   Navigator.of(context).pop();
                 },
               ),
@@ -116,14 +165,15 @@ class _AddPostScreenState extends State<AddPostScreen> {
               backgroundColor: mobileBackgroundColor,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () {},
+                onPressed: clearImage,
               ),
-              title:  Text(
+              title: Text(
                 "New post",
               ),
               actions: <Widget>[
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () => postImage(userInfo["uid"].toString(),
+                      userInfo["username"].toString(), userInfo["photoUrl"].toString()),
                   child: const Text(
                     "Post",
                     style: TextStyle(

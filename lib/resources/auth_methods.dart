@@ -26,15 +26,14 @@ class AuthMethods {
             email: email, password: password);
         String uid = credential.user!.uid.toString();
         String avatarUrl =
-            await StorageMethods().uploadImageToStorage('avatars', file, false);
+            await StorageMethods().uploadImageToStorage('avatars', file, false, "");
 
         DatabaseReference ref = FirebaseDatabase.instance.ref("users/$uid");
         ref.set({'username': username,
           'photoUrl': avatarUrl,
           'email': email,
           'bio': bio,
-          'followers': FieldValue.arrayUnion([]),
-          'following': FieldValue.arrayUnion([])});
+          });
 
         res = "sign up success";
       }

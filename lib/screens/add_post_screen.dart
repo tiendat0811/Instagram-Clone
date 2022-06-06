@@ -37,17 +37,22 @@ class _AddPostScreenState extends State<AddPostScreen> {
     // start the loading
     String res = "ERROR";
     try {
+      DatabaseReference ref = FirebaseDatabase.instance.ref("posts/").push();
+      String postId = ref.key.toString();
       String postUrl = await StorageMethods()
-          .uploadImageToStorage('postImages', _file!, true);
-      DatabaseReference ref = FirebaseDatabase.instance.ref("posts/");
-
-      ref.push().set({
+          .uploadImageToStorage('postImages', _file!, true, postId);
+      Map<String, dynamic> postInfo = {
         'description': _descriptionController.text,
         'postImage': postUrl,
         'uid': userInfo["uid"],
         'username': userInfo["name"],
         'userImage': userInfo["photoUrl"],
-        'datePublished': DateTime.now().toString(),
+        'datePublished': DateTime.now().millisecondsSinceEpoch,
+        'countCmt' : 0
+      };
+      ref.set(postInfo);
+      FirebaseDatabase.instance.ref("likes/").child(postId).set({
+        "start" : false
       });
       res = 'addPost success';
       if (res == "addPost success") {
@@ -102,9 +107,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
     } else {
       print('No data available.');
     }
-
-
-
   }
 
   _selectImage(BuildContext context) async {

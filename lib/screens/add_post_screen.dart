@@ -26,8 +26,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
     'email': '',
     'photoUrl': '',
     'bio': '',
-    'followers': '',
-    'following': ''
   };
 
   void postImage(String uid, String username, String profImage) async {
@@ -101,8 +99,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
         userInfo.update('email', (value) => data['email']);
         userInfo.update('photoUrl', (value) => data['photoUrl']);
         userInfo.update('bio', (value) => data['bio']);
-        userInfo.update('followers', (value) => data['followers']);
-        userInfo.update('following', (value) => data['following']);
       });
     } else {
       print('No data available.');

@@ -16,6 +16,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController searchController = TextEditingController();
   bool isShowUsers = false;
+  final defaultImg =
+      "https://icon-library.com/images/instagram-round-icon-png/instagram-round-icon-png-5.jpg";
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +29,85 @@ class _SearchScreenState extends State<SearchScreen> {
             controller: searchController,
             decoration:
                 const InputDecoration(labelText: 'Search for a user...'),
-            onFieldSubmitted: (String _) {
-              setState(() {
-                isShowUsers = true;
-              });
-              print(_);
+            onChanged: (String _) {
+              if (_ != null) {
+                setState(() {
+                  isShowUsers = true;
+                });
+              }
+              if (_ == "") {
+                isShowUsers = false;
+              }
             },
           ),
         ),
       ),
       body: isShowUsers
-          ? Text("Dang tim user")
+          ? StreamBuilder(
+              stream: FirebaseDatabase.instance
+                  .ref()
+                  .child('users')
+                  .orderByChild("username")
+                  .startAt(searchController.text)
+                  .endAt(searchController.text + '\uf8ff')
+                  .onValue,
+              builder: (context, snapshot) {
+                final tileList = <Widget>[];
+                if (snapshot.hasData) {
+                  DatabaseEvent dataValues = snapshot.data! as DatabaseEvent;
+                  if (dataValues.snapshot.exists) {
+                    final listUsers = Map<String, dynamic>.from(
+                        dataValues.snapshot.value as Map<dynamic, dynamic>);
+                    if (listUsers.isNotEmpty) {
+                      listUsers.forEach((key, value) {
+                        final nextUser = Map<String, dynamic>.from(value);
+                        final post = Container(
+                          padding: const EdgeInsets.all(2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 6)
+                                .copyWith(right: 0),
+                            child: Row(
+                              children: [
+                                nextUser['photoUrl'] != null
+                                    ? CircleAvatar(
+                                        radius: 24,
+                                        backgroundImage:
+                                            NetworkImage(nextUser['photoUrl']),
+                                      )
+                                    : CircularProgressIndicator(),
+                                Expanded(
+                                    child: Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        nextUser['username'],
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 24),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        );
+                        tileList.add(post);
+                      });
+                    } else {
+                      tileList.add(Text("No users found"));
+                    }
+                  }
+                }
+                return ListView(
+                  children: tileList,
+                );
+              })
           : StreamBuilder(
               stream: FirebaseDatabase.instance.ref('posts/').onValue,
               builder: (context, snapshot) {
@@ -47,25 +117,27 @@ class _SearchScreenState extends State<SearchScreen> {
                   if (dataValues.snapshot.exists) {
                     final myPosts = Map<String, dynamic>.from(
                         dataValues.snapshot.value as Map<dynamic, dynamic>);
-                    var sortByValue = new SplayTreeMap<String, dynamic>.from(
-                        myPosts,
-                            (key2, key1) => myPosts[key1]['datePublished']
-                            .compareTo(myPosts[key2]['datePublished']));
+                    if (myPosts.isNotEmpty) {
+                      myPosts.forEach((key, value) {
+                        final nextPost = Map<String, dynamic>.from(value);
+                        final post = Container(
+                          padding: const EdgeInsets.all(2),
+                          child: nextPost['postImage'] != null
+                              ? Image(image: NetworkImage(nextPost['postImage']),fit: BoxFit.cover,)
+                              : CircularProgressIndicator(),
+                        );
+                        tileList.add(post);
+                      });
+                    } else {
+                      tileList.add(Text(""));
+                    }
 
-                    sortByValue.forEach((key, value) {
-                      final nextPost = Map<String, dynamic>.from(value);
-                      final post = Container(
-                        padding: const EdgeInsets.all(2),
-                        child: Image.network(nextPost['postImage']),
-                      );
-                      tileList.add(post);
-                    });
                     return GridView.count(
                       primary: false,
-                      padding: const EdgeInsets.all(20),
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      crossAxisCount: 2,
+                      padding: const EdgeInsets.all(5),
+                      crossAxisSpacing: 1,
+                      mainAxisSpacing: 1,
+                      crossAxisCount: 3,
                       children: tileList,
                     );
                   }

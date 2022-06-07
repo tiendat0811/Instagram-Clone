@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:instagram_clone/screens/add_post_screen.dart';
 import 'package:instagram_clone/screens/feed_screen.dart';
+import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/screens/search_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
 
@@ -17,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String username = "";
+  final _uid = FirebaseAuth.instance.currentUser!.uid;
   int _page = 0;
   late PageController pageController;
 
@@ -69,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SearchScreen(),
             AddPostScreen(),
             Text("noti"),
-            Text("profile"),
+            ProfileScreen(uid:_uid),
           ],
           controller: pageController,
           onPageChanged: onPageChanged,

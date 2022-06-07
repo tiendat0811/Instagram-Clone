@@ -25,8 +25,6 @@ class _CommentScreenState extends State<CommentScreen> {
     'email': '',
     'photoUrl': "https://images.squarespace-cdn.com/content/v1/54b7b93ce4b0a3e130d5d232/1519987020970-8IQ7F6Z61LLBCX85A65S/icon.png?format=1000w",
     'bio': '',
-    'followers': '',
-    'following': ''
   };
 
   void getUser() async {
@@ -42,8 +40,6 @@ class _CommentScreenState extends State<CommentScreen> {
         userInfo.update('email', (value) => data['email']);
         userInfo.update('photoUrl', (value) => data['photoUrl']);
         userInfo.update('bio', (value) => data['bio']);
-        userInfo.update('followers', (value) => data['followers']);
-        userInfo.update('following', (value) => data['following']);
       });
     } else {
       print('No data available.');

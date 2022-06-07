@@ -1,9 +1,10 @@
+import 'dart:collection';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/colors.dart';
-import '../utils/utils.dart';
 import '../widgets/follow_button.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final _uidCur= FirebaseAuth.instance.currentUser!.uid;
   var userData = {};
   int postLen = 0;
   int followers = 0;
@@ -42,35 +44,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (data.isNotEmpty) {
         userData = data;
       }
-      //get post length
-      final postSnapshot = await ref
-          .child("posts")
-          .orderByChild("uid")
-          .equalTo('${widget.uid}')
-          .get();
-      if (postSnapshot.exists) {
-        final listPost = Map<String, dynamic>.from(
-            postSnapshot.value as Map<dynamic, dynamic>);
-        if (listPost.isNotEmpty) {
-          postLen = listPost.length;
-        }
-      }
-
       //get followers
       final followerSnapshot =
-      await ref.child('follow/followers/${widget.uid}').get();
+      await ref.child('follow').child('followers').child(widget.uid).get();
       if (followerSnapshot.exists) {
         final followerData = Map<String, dynamic>.from(
             followerSnapshot.value as Map<dynamic, dynamic>);
         if (followerData.isNotEmpty) {
           //check following
-          isFollowing = followerData.containsKey('${widget.uid}');
+          isFollowing = followerData.containsKey(_uidCur);
           followers = followerData.length;
         }
       }
       //get following
-      final followingSnapshot =
-      await ref.child('follow/followings/${widget.uid}').get();
+      final followingSnapshot = await ref.child('follow').child('followings').child(widget.uid).get();
       if (followingSnapshot.exists) {
         final followingData = Map<String, dynamic>.from(
             followingSnapshot.value as Map<dynamic, dynamic>);
@@ -79,9 +66,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           following = followingData.length;
         }
       }
+      
+      final postSnapshot = await ref
+          .child("posts")
+          .orderByChild("uid")
+          .equalTo(widget.uid)
+          .get();
+      if (postSnapshot.exists) {
+        final listPost = Map<String, dynamic>.from(
+            postSnapshot.value as Map<dynamic, dynamic>);
+        if (listPost.isNotEmpty) {
+          postLen = listPost.length;
+        }
+      }
       setState(() {});
     } catch (e) {
-      showSnackBar(e.toString(), context);
+      print("");
     }
     setState(() {
       isLoading = false;
@@ -161,17 +161,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   textColor: Colors.black,
                                   borderColor: Colors.grey,
                                   function: () async {
-                                    // await FireStoreMethods()
-                                    //     .followUser(
-                                    //   FirebaseAuth.instance
-                                    //       .currentUser!.uid,
-                                    //   userData['uid'],
-                                    // );
-                                    //
-                                    // setState(() {
-                                    //   isFollowing = false;
-                                    //   followers--;
-                                    // });
+                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child('${widget.uid}');
+                                    final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
+
+                                    refFollower.update({
+                                      _uidCur: null
+                                    });
+
+                                    refFollowing.update({
+                                      widget.uid: null
+                                    });
+
+                                    setState(() {
+                                      isFollowing = false;
+                                      followers--;
+                                    });
                                   },
                                 )
                                     : FollowButton(
@@ -180,17 +184,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   textColor: Colors.white,
                                   borderColor: Colors.blue,
                                   function: () async {
-                                    // await FireStoreMethods()
-                                    //     .followUser(
-                                    //   FirebaseAuth.instance
-                                    //       .currentUser!.uid,
-                                    //   userData['uid'],
-                                    // );
-                                    //
-                                    // setState(() {
-                                    //   isFollowing = true;
-                                    //   followers++;
-                                    // });
+                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child('${widget.uid}');
+                                    final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
+
+                                    refFollower.update({
+                                      _uidCur: true
+                                    });
+
+                                    refFollowing.update({
+                                      widget.uid: true
+                                    });
+
+                                    setState(() {
+                                      isFollowing = true;
+                                      followers++;
+                                    });
                                   },
                                 )
                               ],
@@ -236,7 +244,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final myPosts = Map<String, dynamic>.from(
                         dataValues.snapshot.value as Map<dynamic, dynamic>);
                     if (myPosts.isNotEmpty) {
-                      myPosts.forEach((key, value) {
+                      var sortByValue = new SplayTreeMap<String, dynamic>.from(
+                          myPosts,
+                              (key2, key1) => myPosts[key1]['datePublished']
+                              .compareTo(myPosts[key2]['datePublished']));
+                      sortByValue.forEach((key, value) {
                         final nextPost = Map<String, dynamic>.from(value);
                         final post = Container(
                           padding: const EdgeInsets.all(2),
@@ -257,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }
                 }
-                return CircularProgressIndicator();
+                return Text("");
               }
           ),
         ],

@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:instagram_clone/screens/profile_screen.dart';
 
 import '../utils/colors.dart';
 
@@ -67,33 +67,42 @@ class _SearchScreenState extends State<SearchScreen> {
                             padding: const EdgeInsets.symmetric(
                                     vertical: 4, horizontal: 6)
                                 .copyWith(right: 0),
-                            child: Row(
-                              children: [
-                                nextUser['photoUrl'] != null
-                                    ? CircleAvatar(
-                                        radius: 24,
-                                        backgroundImage:
-                                            NetworkImage(nextUser['photoUrl']),
-                                      )
-                                    : CircularProgressIndicator(),
-                                Expanded(
-                                    child: Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        nextUser['username'],
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 24),
-                                      ),
-                                    ],
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ProfileScreen(
+                                    uid: '$key',
                                   ),
-                                )),
-                              ],
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  nextUser['photoUrl'] != null
+                                      ? CircleAvatar(
+                                          radius: 24,
+                                          backgroundImage: NetworkImage(
+                                              nextUser['photoUrl']),
+                                        )
+                                      : CircularProgressIndicator(),
+                                  Expanded(
+                                      child: Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          nextUser['username'],
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 24),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -118,12 +127,19 @@ class _SearchScreenState extends State<SearchScreen> {
                     final myPosts = Map<String, dynamic>.from(
                         dataValues.snapshot.value as Map<dynamic, dynamic>);
                     if (myPosts.isNotEmpty) {
-                      myPosts.forEach((key, value) {
+                      var sortByValue = new SplayTreeMap<String, dynamic>.from(
+                          myPosts,
+                              (key2, key1) => myPosts[key1]['datePublished']
+                              .compareTo(myPosts[key2]['datePublished']));
+                      sortByValue.forEach((key, value) {
                         final nextPost = Map<String, dynamic>.from(value);
                         final post = Container(
                           padding: const EdgeInsets.all(2),
                           child: nextPost['postImage'] != null
-                              ? Image(image: NetworkImage(nextPost['postImage']),fit: BoxFit.cover,)
+                              ? Image(
+                                  image: NetworkImage(nextPost['postImage']),
+                                  fit: BoxFit.cover,
+                                )
                               : CircularProgressIndicator(),
                         );
                         tileList.add(post);

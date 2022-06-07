@@ -45,21 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // void getUserName() async {
-  //   _database
-  //       .child("users/${FirebaseAuth.instance.currentUser!.uid}")
-  //       .onValue
-  //       .listen((event) {
-  //     final data = new Map<String, dynamic>.from(
-  //         event.snapshot.value as Map<dynamic, dynamic>);
-  //     final name = data['username'];
-  //     setState(() {
-  //       username = name;
-  //     });
-  //   });
-  // }
-
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -71,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SearchScreen(),
             AddPostScreen(),
             Text("noti"),
-            ProfileScreen(uid:_uid),
+            ProfileScreen(uid:'$_uid'),
           ],
           controller: pageController,
           onPageChanged: onPageChanged,

@@ -46,12 +46,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
         'username': userInfo["name"],
         'userImage': userInfo["photoUrl"],
         'datePublished': DateTime.now().millisecondsSinceEpoch,
-        'countCmt' : 0
+        'countCmt': 0
       };
       ref.set(postInfo);
-      FirebaseDatabase.instance.ref("likes/").child(postId).set({
-        "start" : false
-      });
+      FirebaseDatabase.instance
+          .ref("likes/")
+          .child(postId)
+          .set({"start": false});
       res = 'addPost success';
       if (res == "addPost success") {
         setState(() {
@@ -87,12 +88,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
     super.dispose();
   }
 
-  void getUser() async{
+  void getUser() async {
     String uid = FirebaseAuth.instance.currentUser!.uid;
     final ref = FirebaseDatabase.instance.ref();
     final snapshot = await ref.child('users/$uid').get();
     if (snapshot.exists) {
-      final data = Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      final data =
+          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
       setState(() {
         userInfo.update('uid', (value) => uid);
         userInfo.update('name', (value) => data['username']);
@@ -169,25 +171,29 @@ class _AddPostScreenState extends State<AddPostScreen> {
               ),
               actions: <Widget>[
                 TextButton(
-                  onPressed: () => postImage(userInfo["uid"].toString(),
-                      userInfo["username"].toString(), userInfo["photoUrl"].toString()),
+                  onPressed: () => postImage(
+                      userInfo["uid"].toString(),
+                      userInfo["username"].toString(),
+                      userInfo["photoUrl"].toString()),
                   child: const Text(
                     "Post",
                     style: TextStyle(
                         color: Colors.blueAccent,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16.0),
+                        fontSize: 16),
                   ),
                 )
               ],
             ),
-            body: Column(
+            body: ListView(
+              shrinkWrap: true,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
+                      radius: 24,
                       backgroundImage: NetworkImage(userInfo["photoUrl"]),
                     ),
                     SizedBox(
@@ -200,24 +206,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         maxLines: 8,
                       ),
                     ),
-                    SizedBox(
-                      height: 45.0,
-                      width: 45.0,
-                      child: AspectRatio(
-                        aspectRatio: 487 / 451,
-                        child: Container(
-                          decoration: BoxDecoration(
-                              image: DecorationImage(
-                            fit: BoxFit.fill,
-                            alignment: FractionalOffset.topCenter,
-                            image: MemoryImage(_file!),
-                          )),
-                        ),
-                      ),
-                    ),
                     const Divider(),
                   ],
+                ),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  child: Image(fit: BoxFit.fitWidth, image: MemoryImage(_file!)),
                 )
+                
               ],
             ),
           );

@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:instagram_clone/screens/add_post_screen.dart';
 import 'package:instagram_clone/screens/feed_screen.dart';
+import 'package:instagram_clone/screens/notifications_screen.dart';
 import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/screens/search_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
             FeedScreen(),
             SearchScreen(),
             AddPostScreen(),
-            Text("noti"),
+            NotificationsScreen(),
             ProfileScreen(uid:'$_uid'),
           ],
           controller: pageController,

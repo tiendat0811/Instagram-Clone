@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/colors.dart';
 import '../widgets/follow_button.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String uid;
@@ -144,14 +145,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   textColor: primaryColor,
                                   borderColor: Colors.grey,
                                   function: () async {
-                                    // await AuthMethods().signOut();
-                                    // Navigator.of(context)
-                                    //     .pushReplacement(
-                                    //   MaterialPageRoute(
-                                    //     builder: (context) =>
-                                    //     const LoginScreen(),
-                                    //   ),
-                                    // );
+                                    await FirebaseAuth.instance.signOut();
+                                    Navigator.of(context)
+                                        .pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                        const LoginScreen(),
+                                      ),
+                                    );
                                   },
                                 )
                                     : isFollowing
@@ -198,6 +199,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     setState(() {
                                       isFollowing = true;
                                       followers++;
+                                    });
+
+                                    //notifications
+                                    final snapshot = await FirebaseDatabase.instance.ref().child('users').child(_uidCur).get();
+                                    final data =
+                                    Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+                                    final notifications = await FirebaseDatabase.instance.ref("notifications").child('${widget.uid}');
+                                    notifications.push().set({
+                                        'username': data['username'],
+                                        'userImg': data['photoUrl'],
+                                        'text' : "started following you",
+                                        'datePublished' : DateTime.now().millisecondsSinceEpoch
                                     });
                                   },
                                 )

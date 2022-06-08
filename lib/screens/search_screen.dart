@@ -127,11 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     final myPosts = Map<String, dynamic>.from(
                         dataValues.snapshot.value as Map<dynamic, dynamic>);
                     if (myPosts.isNotEmpty) {
-                      var sortByValue = new SplayTreeMap<String, dynamic>.from(
-                          myPosts,
-                              (key2, key1) => myPosts[key1]['datePublished']
-                              .compareTo(myPosts[key2]['datePublished']));
-                      sortByValue.forEach((key, value) {
+                      myPosts.forEach((key, value) {
                         final nextPost = Map<String, dynamic>.from(value);
                         final post = Container(
                           padding: const EdgeInsets.all(2),

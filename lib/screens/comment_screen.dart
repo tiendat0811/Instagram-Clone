@@ -4,13 +4,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jiffy/jiffy.dart';
 import '../utils/colors.dart';
 import '../utils/utils.dart';
 
 class CommentScreen extends StatefulWidget {
-  final postId;
+  final postId, userPost;
 
-  const CommentScreen({Key? key, required this.postId}) : super(key: key);
+  const CommentScreen({Key? key, required this.postId, required this.userPost}) : super(key: key);
 
   @override
   _CommentScreenState createState() => _CommentScreenState();
@@ -82,6 +83,16 @@ class _CommentScreenState extends State<CommentScreen> {
         count++;
         await FirebaseDatabase.instance.ref("posts/${widget.postId}/").update({'countCmt': count});
       }
+
+      //notification
+      final notifications = await FirebaseDatabase.instance.ref("notifications").child('${widget.userPost}');
+      notifications.push().set({
+        'username' : userInfo['name'],
+        'userImg': userInfo['photoUrl'],
+        'text' : "commented on your post",
+        'datePublished' : DateTime.now().millisecondsSinceEpoch
+      });
+
       if (res != 'success') {
         showSnackBar(res, context);
       }
@@ -155,15 +166,9 @@ class _CommentScreenState extends State<CommentScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    DateFormat.Hm().format(
-                                        DateTime.fromMillisecondsSinceEpoch(
-                                            nextComment
-                                            ['datePublished'])) +
-                                        " " +
-                                        DateFormat.yMMMMd().format(
-                                            DateTime.fromMillisecondsSinceEpoch(
-                                                nextComment
-                                                ['datePublished'])),
+                                    Jiffy(DateTime
+                                        .fromMillisecondsSinceEpoch(
+                                        nextComment['datePublished'])).fromNow(),
                                     style: const TextStyle(
                                       color: secondaryColor,
                                     ),

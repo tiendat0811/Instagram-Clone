@@ -7,6 +7,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
 import 'package:intl/intl.dart';
+import 'package:jiffy/jiffy.dart';
 
 import '../utils/utils.dart';
 import 'comment_screen.dart';
@@ -218,7 +219,7 @@ class _FeedScreenState extends State<FeedScreen> {
                               children: [
                                 IconButton(
                                   onPressed: () =>
-                                      likePost(key, _uid, likeOfPosts[key]),
+                                      likePost(key, _uid, likeOfPosts[key], nextPost['uid']),
                                   icon: likeOfPosts[key].containsKey(_uid)
                                       ? const Icon(
                                           Icons.favorite,
@@ -232,7 +233,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                     onPressed: () => Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) => CommentScreen(
-                                              postId: key,
+                                              postId: key, userPost: nextPost['uid']
                                             ),
                                           ),
                                         ),
@@ -312,20 +313,16 @@ class _FeedScreenState extends State<FeedScreen> {
                                     onTap: () => Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) => CommentScreen(
-                                          postId: key,
+                                          postId: key, userPost: nextPost['uid'],
                                         ),
                                       ),
                                     ),
                                   ),
                                   Container(
                                     child: Text(
-                                      DateFormat.Hm().format(DateTime
-                                              .fromMillisecondsSinceEpoch(
-                                                  nextPost['datePublished'])) +
-                                          " " +
-                                          DateFormat.yMMMMd().format(DateTime
-                                              .fromMillisecondsSinceEpoch(
-                                                  nextPost['datePublished'])),
+                                      Jiffy(DateTime
+                                          .fromMillisecondsSinceEpoch(
+                                          nextPost['datePublished'])).fromNow(),
                                       style: const TextStyle(
                                         color: secondaryColor,
                                       ),
@@ -362,12 +359,22 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void likePost(String key, String uid, Map list) {
-    final ref = FirebaseDatabase.instance.ref('likes/');
+  void likePost(String key, String uid, Map list, String userPost) async{
+    final ref = await FirebaseDatabase.instance.ref('likes/');
     if (list.containsKey(uid)) {
       ref.child(key).update({uid: null});
     } else {
       ref.child(key).update({uid: true});
+      final snapshot = await FirebaseDatabase.instance.ref().child('users').child(uid).get();
+      final data =
+      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      final notifications = FirebaseDatabase.instance.ref("notifications").child('${userPost}');
+      notifications.push().set({
+        'username' : data['name'],
+        'userImg': data['photoUrl'],
+        'text' : "liked on your post",
+        'datePublished' : DateTime.now().millisecondsSinceEpoch
+      });
     }
   }
 }

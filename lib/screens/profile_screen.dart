@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:instagram_clone/screens/inbox_screen.dart';
 
 import '../utils/colors.dart';
 import '../widgets/follow_button.dart';
@@ -178,6 +179,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       followers--;
                                     });
                                   },
+                                  functionChat: ()  {
+                                    Navigator.of(context)
+                                        .push(
+                                      MaterialPageRoute(
+                                        builder: (context) => InboxScreen(sender: _uidCur, receiver: widget.uid),
+                                      ),
+                                    );
+                                  },
                                 )
                                     : FollowButton(
                                   text: 'Follow',
@@ -185,17 +194,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   textColor: Colors.white,
                                   borderColor: Colors.blue,
                                   function: () async {
-                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child('${widget.uid}');
+                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child(widget.uid);
                                     final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
 
+                                    //create chat
+                                    String keyChat = "";
+                                    final isHasKey = await FirebaseDatabase.instance.ref("follow").child("followers").child(_uidCur).get();
+                                    if(isHasKey.exists){
+                                      final checkKey =
+                                      Map<String, dynamic>.from(isHasKey.value as Map<dynamic, dynamic>);
+                                      print(checkKey);
+                                      keyChat = checkKey[widget.uid];
+                                    }else{
+                                     keyChat = await FirebaseDatabase.instance.ref().child('chats').push().key.toString();
+                                    }
+
                                     refFollower.update({
-                                      _uidCur: true
+                                      _uidCur: keyChat
                                     });
 
                                     refFollowing.update({
-                                      widget.uid: true
+                                      widget.uid: keyChat
                                     });
 
+                                    await FirebaseDatabase.instance.ref().child('users').child(_uidCur).child("chatHistory").update({keyChat : true});
+                                    await FirebaseDatabase.instance.ref().child('users').child(widget.uid).child("chatHistory").update({keyChat : true});
                                     setState(() {
                                       isFollowing = true;
                                       followers++;

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:instagram_clone/screens/chats_screen.dart';
 import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
 import 'package:intl/intl.dart';
@@ -52,7 +53,11 @@ class _FeedScreenState extends State<FeedScreen> {
               Icons.messenger,
               color: primaryColor,
             ),
-            onPressed: () {},
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ChatsScreen(),
+              ),
+            ),
           ),
         ],
       ),

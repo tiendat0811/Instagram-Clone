@@ -166,12 +166,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child('${widget.uid}');
                                     final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
 
-                                    refFollower.update({
-                                      _uidCur: null
+                                    refFollower.child(_uidCur).update({
+                                      'follow': false
                                     });
 
-                                    refFollowing.update({
-                                      widget.uid: null
+                                    refFollowing.child(widget.uid).update({
+                                      'follow': false
                                     });
 
                                     setState(() {
@@ -199,26 +199,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                     //create chat
                                     String keyChat = "";
-                                    final isHasKey = await FirebaseDatabase.instance.ref("follow").child("followers").child(_uidCur).get();
+                                    String lastMess = "Say hi with ${userData['username']}";
+                                    int datePublished = DateTime.now().millisecondsSinceEpoch;
+                                    final isHasKey = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur).child(widget.uid).get();
                                     if(isHasKey.exists){
                                       final checkKey =
                                       Map<String, dynamic>.from(isHasKey.value as Map<dynamic, dynamic>);
                                       print(checkKey);
-                                      keyChat = checkKey[widget.uid];
+                                      keyChat = checkKey['chatHistory'];
+                                      lastMess = checkKey['lastMess'];
+                                      datePublished = checkKey['datePublished'];
                                     }else{
                                      keyChat = await FirebaseDatabase.instance.ref().child('chats').push().key.toString();
                                     }
 
-                                    refFollower.update({
-                                      _uidCur: keyChat
+                                    refFollower.child(_uidCur).update({
+                                      'follow' : true,
+                                      'chatHistory': keyChat
                                     });
 
-                                    refFollowing.update({
-                                      widget.uid: keyChat
+                                    refFollowing.child(widget.uid).update({
+                                      'follow' : true,
+                                      'chatHistory': keyChat,
+                                      'photoUrl' : userData['photoUrl'],
+                                      'username': userData['username'],
+                                      'lastMess': lastMess,
+                                      'datePublished' : datePublished
                                     });
 
-                                    await FirebaseDatabase.instance.ref().child('users').child(_uidCur).child("chatHistory").update({keyChat : true});
-                                    await FirebaseDatabase.instance.ref().child('users').child(widget.uid).child("chatHistory").update({keyChat : true});
+
                                     setState(() {
                                       isFollowing = true;
                                       followers++;

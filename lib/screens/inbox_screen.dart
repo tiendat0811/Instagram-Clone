@@ -97,6 +97,16 @@ class _InboxScreenState extends State<InboxScreen> {
         'datePublished' : DateTime.now().millisecondsSinceEpoch
       });
 
+      await FirebaseDatabase.instance
+          .ref("follow")
+          .child('followings')
+          .child(widget.receiver)
+          .child(widget.sender)
+          .update({
+        'lastMess': chatInfo['text'],
+        'datePublished' : DateTime.now().millisecondsSinceEpoch
+      });
+
       res = 'success';
 
       if (res != 'success') {

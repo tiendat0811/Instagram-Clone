@@ -21,6 +21,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _uidCur= FirebaseAuth.instance.currentUser!.uid;
   var userData = {};
+  var curUserData = {};
   int postLen = 0;
   int followers = 0;
   int following = 0;
@@ -40,11 +41,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       //get user info
       final ref = FirebaseDatabase.instance.ref();
-      final snapshot = await ref.child('users').child('${widget.uid}').get();
+      final snapshot = await ref.child('users').child(widget.uid).get();
       final data =
       Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
       if (data.isNotEmpty) {
         userData = data;
+      }
+
+      final snapshotCur = await ref.child('users').child(_uidCur).get();
+      final dataCur =
+      Map<String, dynamic>.from(snapshotCur.value as Map<dynamic, dynamic>);
+      if (data.isNotEmpty) {
+        curUserData = dataCur;
       }
       //get followers
       final followerSnapshot =
@@ -102,6 +110,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Text(
           userData['username'],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.settings,
+              color: primaryColor,
+            ),
+            onPressed: () => {}
+            //     Navigator.of(context).push(
+            //   MaterialPageRoute(
+            //     builder: (context) => ChatsScreen(),
+            //   ),
+            // ),
+          ),
+        ],
         centerTitle: false,
       ),
       body: ListView(
@@ -199,12 +221,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                     //create chat
                                     String keyChat = "";
-                                    String lastMess = "Say hi with ${userData['username']}";
+                                    String lastMess = "Say hi with ";
                                     int datePublished = DateTime.now().millisecondsSinceEpoch;
                                     final isHasKey = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur).child(widget.uid).get();
-                                    if(isHasKey.exists){
-                                      final checkKey =
-                                      Map<String, dynamic>.from(isHasKey.value as Map<dynamic, dynamic>);
+                                    final isHasKey2 = await FirebaseDatabase.instance.ref("follow").child("followings").child(widget.uid).child(_uidCur).get();
+                                    if(isHasKey.exists || isHasKey2.exists){
+                                      final checkKey;
+                                      if(isHasKey.exists){
+                                        checkKey = Map<String, dynamic>.from(isHasKey.value as Map<dynamic, dynamic>);
+                                      }else{
+                                        checkKey = Map<String, dynamic>.from(isHasKey2.value as Map<dynamic, dynamic>);
+                                      }
                                       print(checkKey);
                                       keyChat = checkKey['chatHistory'];
                                       lastMess = checkKey['lastMess'];
@@ -217,12 +244,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       'follow' : true,
                                       'chatHistory': keyChat
                                     });
-
+                                    if(lastMess == "Say hi with "){
+                                      lastMess = lastMess + "${userData['username']}";
+                                    }
                                     refFollowing.child(widget.uid).update({
                                       'follow' : true,
                                       'chatHistory': keyChat,
                                       'photoUrl' : userData['photoUrl'],
                                       'username': userData['username'],
+                                      'lastMess': lastMess,
+                                      'datePublished' : datePublished
+                                    });
+                                    if(lastMess == "Say hi with ${userData['username']}"){
+                                      lastMess = "Say hi with ${curUserData['username']}";
+                                    }
+                                    FirebaseDatabase.instance.ref("follow").child("followings").child(widget.uid).child(_uidCur).update({
+                                      'follow' : false,
+                                      'chatHistory': keyChat,
+                                      'photoUrl' : curUserData['photoUrl'],
+                                      'username': curUserData['username'],
                                       'lastMess': lastMess,
                                       'datePublished' : datePublished
                                     });

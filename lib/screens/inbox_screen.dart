@@ -40,15 +40,15 @@ class _InboxScreenState extends State<InboxScreen> {
       final ref = FirebaseDatabase.instance.ref();
       final snapshot = await ref.child('users').child('${widget.sender}').get();
       final data =
-          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
       if (data.isNotEmpty) {
         senderData = data;
       }
 
       final snapshot2 =
-          await ref.child('users').child('${widget.receiver}').get();
+      await ref.child('users').child('${widget.receiver}').get();
       final data2 =
-          Map<String, dynamic>.from(snapshot2.value as Map<dynamic, dynamic>);
+      Map<String, dynamic>.from(snapshot2.value as Map<dynamic, dynamic>);
       if (data2.isNotEmpty) {
         receiverData = data2;
       }
@@ -103,6 +103,7 @@ class _InboxScreenState extends State<InboxScreen> {
           .child(widget.receiver)
           .child(widget.sender)
           .update({
+        'chatHistory': chatId,
         'lastMess': chatInfo['text'],
         'datePublished' : DateTime.now().millisecondsSinceEpoch
       });
@@ -124,184 +125,232 @@ class _InboxScreenState extends State<InboxScreen> {
     }
   }
 
+  void deleteMess(String messId) async{
+    try{
+      await FirebaseDatabase.instance.ref("chats").child(chatId).child(messId).remove();
+    }catch(e){
+      print(e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return isLoading
         ? const Center(
-            child: CircularProgressIndicator(),
-          )
+      child: CircularProgressIndicator(),
+    )
         : Scaffold(
-            appBar: AppBar(
-              backgroundColor: mobileBackgroundColor,
-              title: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundImage: NetworkImage(receiverData['photoUrl']),
-                  ),
-                  Container(
-                    padding: EdgeInsets.only(left: 20),
-                    child: Text(receiverData['username']),
-                  )
-                ],
-              ),
-              centerTitle: false,
+      appBar: AppBar(
+        backgroundColor: mobileBackgroundColor,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundImage: NetworkImage(receiverData['photoUrl']),
             ),
-            body: StreamBuilder(
-              stream:
-                  FirebaseDatabase.instance.ref("chats").child(chatId).onValue,
-              builder: (context, snapshot) {
-                final chatList = <ListTile>[];
-                if (snapshot.hasData) {
-                  DatabaseEvent chats = snapshot.data! as DatabaseEvent;
-                  if (chats.snapshot.exists) {
-                    final commentsData = Map<String, dynamic>.from(
-                        chats.snapshot.value as Map<dynamic, dynamic>);
-                    var sortByValue = new SplayTreeMap<String, dynamic>.from(
-                        commentsData,
-                        (key2, key1) => commentsData[key1]['datePublished']
-                            .compareTo(commentsData[key2]['datePublished']));
-                    sortByValue.forEach((key, value) {
-                      final nextMess = Map<String, dynamic>.from(value);
-                      final messTile = ListTile(
-                          title: nextMess['sender'] == widget.receiver
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          margin: EdgeInsets.only(right: 10),
-                                          child: CircleAvatar(
-                                            backgroundImage: NetworkImage(
-                                                receiverData['photoUrl']),
-                                          ),
-                                        ),
-                                        Flexible(
-                                            child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 20.0 * 0.75,
-                                              vertical: 20 / 2),
-                                          child: Text(
-                                            nextMess['text'],
-                                            softWrap: true,
-                                          ),
-                                          decoration: BoxDecoration(
-                                              color: secondaryColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(30)),
-                                        )),
-                                      ],
-                                    ),
-                                    Container(
-                                      padding:
-                                          EdgeInsets.only(left: 50, top: 10),
-                                      child: Text(
-                                        Jiffy(DateTime
-                                                .fromMillisecondsSinceEpoch(
-                                                    nextMess['datePublished']))
-                                            .fromNow(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    )
-                                  ],
-                                )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Flexible(
-                                            child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 20.0 * 0.75,
-                                              vertical: 20 / 2),
-                                          child: Text(
-                                            nextMess['text'],
-                                            softWrap: true,
-                                          ),
-                                          decoration: BoxDecoration(
-                                              color: blueColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(30)),
-                                        )),
-                                      ],
-                                    ),
-                                    Container(
-                                      padding:
-                                          EdgeInsets.only(right: 10, top: 10),
-                                      child: Text(
-                                        Jiffy(DateTime
-                                                .fromMillisecondsSinceEpoch(
-                                                    nextMess['datePublished']))
-                                            .fromNow(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    )
-                                  ],
-                                ));
-
-                      chatList.add(messTile);
-                    });
-                  }
-                }
-                return ListView(
-                  reverse: true,
-                  shrinkWrap: true,
-                  children: chatList,
-                );
-              },
-            ),
-            bottomNavigationBar: SafeArea(
-              child: Container(
-                height: kToolbarHeight,
-                margin: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom),
-                padding: const EdgeInsets.only(left: 16, right: 8),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: NetworkImage(senderData['photoUrl']),
-                      radius: 18,
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 8),
-                        child: TextField(
-                          controller: chatEditingController,
-                          decoration: InputDecoration(
-                            hintText: 'Type message...',
-                            border: InputBorder.none,
+            Container(
+              padding: EdgeInsets.only(left: 20),
+              child: Text(receiverData['username']),
+            )
+          ],
+        ),
+        centerTitle: false,
+      ),
+      body: StreamBuilder(
+        stream:
+        FirebaseDatabase.instance.ref("chats").child(chatId).onValue,
+        builder: (context, snapshot) {
+          final chatList = <ListTile>[];
+          if (snapshot.hasData) {
+            DatabaseEvent chats = snapshot.data! as DatabaseEvent;
+            if (chats.snapshot.exists) {
+              final commentsData = Map<String, dynamic>.from(
+                  chats.snapshot.value as Map<dynamic, dynamic>);
+              var sortByValue = new SplayTreeMap<String, dynamic>.from(
+                  commentsData,
+                      (key2, key1) => commentsData[key1]['datePublished']
+                      .compareTo(commentsData[key2]['datePublished']));
+              sortByValue.forEach((key, value) {
+                final nextMess = Map<String, dynamic>.from(value);
+                final messTile = ListTile(
+                    title: nextMess['sender'] == widget.receiver
+                        ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment:
+                          MainAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: EdgeInsets.only(right: 10),
+                              child: CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                    receiverData['photoUrl']),
+                              ),
+                            ),
+                            Flexible(
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 20.0 * 0.75,
+                                      vertical: 20 / 2),
+                                  child: Text(
+                                    nextMess['text'],
+                                    softWrap: true,
+                                  ),
+                                  decoration: BoxDecoration(
+                                      color: secondaryColor,
+                                      borderRadius:
+                                      BorderRadius.circular(30)),
+                                )),
+                          ],
+                        ),
+                        Container(
+                          padding:
+                          EdgeInsets.only(left: 50, top: 10),
+                          child: Text(
+                            Jiffy(DateTime
+                                .fromMillisecondsSinceEpoch(
+                                nextMess['datePublished']))
+                                .fromNow(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => sendMessage(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 8),
-                        child: const Text(
-                          'Send',
-                          style: TextStyle(color: Colors.blue),
-                        ),
-                      ),
+                        )
+                      ],
                     )
-                  ],
+                        : Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Flexible(
+                                child: InkWell(
+                                  onTap: (){
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => Dialog(
+                                        child: ListView(
+                                            padding: const EdgeInsets
+                                                .symmetric(
+                                                vertical: 16),
+                                            shrinkWrap: true,
+                                            children: [
+                                              'Delete',
+                                            ]
+                                                .map(
+                                                  (e) => InkWell(
+                                                  child:
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical:
+                                                        12,
+                                                        horizontal:
+                                                        16),
+                                                    child:
+                                                    Text(e),
+                                                  ),
+                                                  onTap: () {
+                                                    deleteMess(key);
+                                                    // remove the dialog box
+                                                    Navigator.of(
+                                                        context)
+                                                        .pop();
+                                                  }),
+                                            )
+                                                .toList()),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 20.0 * 0.75,
+                                        vertical: 20 / 2),
+                                    child: Text(
+                                      nextMess['text'],
+                                      softWrap: true,
+                                    ),
+                                    decoration: BoxDecoration(
+                                        color: blueColor,
+                                        borderRadius:
+                                        BorderRadius.circular(30)),
+                                  ),
+                                )
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding:
+                          EdgeInsets.only(right: 10, top: 10),
+                          child: Text(
+                            Jiffy(DateTime
+                                .fromMillisecondsSinceEpoch(
+                                nextMess['datePublished']))
+                                .fromNow(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                      ],
+                    ));
+
+                chatList.add(messTile);
+              });
+            }
+          }
+          return ListView(
+            reverse: true,
+            shrinkWrap: true,
+            children: chatList,
+          );
+        },
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: kToolbarHeight,
+          margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: const EdgeInsets.only(left: 16, right: 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: NetworkImage(senderData['photoUrl']),
+                radius: 18,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: TextField(
+                    controller: chatEditingController,
+                    decoration: InputDecoration(
+                      hintText: 'Type message...',
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          );
+              InkWell(
+                onTap: () => sendMessage(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 8),
+                  child: const Text(
+                    'Send',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

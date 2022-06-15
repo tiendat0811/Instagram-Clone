@@ -8,7 +8,7 @@ import 'package:instagram_clone/screens/inbox_screen.dart';
 import '../utils/colors.dart';
 import '../widgets/follow_button.dart';
 import 'login_screen.dart';
-
+import 'setting_screen.dart';
 class ProfileScreen extends StatefulWidget {
   final String uid;
 
@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int following = 0;
   bool isFollowing = false;
   bool isLoading = false;
+  late PageController pageController;
 
   @override
   void initState() {
@@ -116,12 +117,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icons.settings,
               color: primaryColor,
             ),
-            onPressed: () => {}
-            //     Navigator.of(context).push(
-            //   MaterialPageRoute(
-            //     builder: (context) => ChatsScreen(),
-            //   ),
-            // ),
+            // Ntluan - open
+              onPressed: (){
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SettingScreen(),
+                  ),
+                ).whenComplete(() => getData());
+              },
+            // Ntluan - close
           ),
         ],
         centerTitle: false,

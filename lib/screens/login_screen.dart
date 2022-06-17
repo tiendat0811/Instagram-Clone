@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:instagram_clone/screens/home_screen.dart';
 import 'package:instagram_clone/screens/signup_screen.dart';
@@ -27,9 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
     String res = await AuthMethods().loginUser(
         email: _emailController.text, password: _passwordController.text);
     if (res == 'login success') {
-
       Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => HomeScreen()));
+          MaterialPageRoute(builder: (context) => const HomeScreen()));
       setState(() {
         _isLoading = false;
       });
@@ -44,6 +46,45 @@ class _LoginScreenState extends State<LoginScreen> {
   void navigateToSignup() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (context) => const SignupScreen()));
+  }
+
+  // FACEBOOK SIGN IN
+  Future<void> signInWithFacebook(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+    });
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+    try {
+      final LoginResult loginResult = await FacebookAuth.instance.login();
+
+      final OAuthCredential facebookAuthCredential =
+          FacebookAuthProvider.credential(loginResult.accessToken!.token);
+
+      await _auth.signInWithCredential(facebookAuthCredential);
+
+      var userData = await FacebookAuth.instance.getUserData();
+      Map<String, dynamic> facebookData;
+      facebookData = userData;
+      final curUid = FirebaseAuth.instance.currentUser!.uid;
+      DatabaseReference ref = FirebaseDatabase.instance.ref("users/$curUid");
+
+      final snapshot = await ref.get();
+      if (snapshot.exists) {
+      } else {
+        ref.update({
+          'username': facebookData['name'],
+          'photoUrl': facebookData['picture']['data']['url'],
+          'bio': "No bio yet"
+        });
+      }
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()));
+      setState(() {
+        _isLoading = false;
+      });
+    } on FirebaseAuthException catch (e) {
+      showSnackBar(e.message!, context); // Displaying the error message
+    }
   }
 
   @override
@@ -71,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: primaryColor,
                       height: 64,
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 64,
                     ),
                     //email
@@ -80,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: "Enter your Email",
                         textInputType: TextInputType.emailAddress),
                     //password
-                    SizedBox(
+                    const SizedBox(
                       height: 24,
                     ),
                     TextFieldInput(
@@ -88,63 +129,72 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: "Enter your Password",
                         textInputType: TextInputType.text,
                         isPass: true),
-                    SizedBox(
+                    const SizedBox(
                       height: 24,
                     ),
                     InkWell(
                       onTap: loginUser,
                       child: Container(
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: const ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(4)),
+                          ),
+                          color: blueColor,
+                        ),
                         child: !_isLoading
                             ? const Text("Log in",
                                 style: TextStyle(fontWeight: FontWeight.bold))
                             : const CircularProgressIndicator(
                                 color: primaryColor,
                               ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 12,
+                    ),
+                    InkWell(
+                      onTap: () {
+                        signInWithFacebook(context);
+                      },
+                      child: Container(
                         width: double.infinity,
                         alignment: Alignment.center,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        decoration: ShapeDecoration(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: const ShapeDecoration(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(Radius.circular(4)),
                           ),
                           color: blueColor,
                         ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: primaryColor,
+                              )
+                            : const Text("Log in with Facebook",
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    SizedBox(
-                      height: 12,
-                    ),
-                    Container(
-                      child: Text("Log in with Facebook",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      width: double.infinity,
-                      alignment: Alignment.center,
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      decoration: ShapeDecoration(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(4)),
-                        ),
-                        color: blueColor,
-                      ),
-                    ),
-                    SizedBox(
+                    const SizedBox(
                       height: 12,
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          child: const Text("Don't have an account?"),
                           padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: const Text("Don't have an account?"),
                         ),
                         GestureDetector(
                           onTap: navigateToSignup,
                           child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: const Text(
                               " Sign up",
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
                         ),
                       ],

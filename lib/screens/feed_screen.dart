@@ -1,5 +1,4 @@
 import 'dart:collection';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -7,11 +6,10 @@ import 'package:flutter_svg/svg.dart';
 import 'package:instagram_clone/screens/chats_screen.dart';
 import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
-import 'package:intl/intl.dart';
 import 'package:jiffy/jiffy.dart';
-
 import '../utils/utils.dart';
 import 'comment_screen.dart';
+import 'detail_post_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({Key? key}) : super(key: key);
@@ -98,22 +96,20 @@ class _FeedScreenState extends State<FeedScreen> {
                       title: Container(
                         color: mobileBackgroundColor,
                         padding: const EdgeInsets.symmetric(
-                          vertical: 10,
+                          vertical: 8
                         ),
                         child: Column(
                           children: [
                             //HEADER POST
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                      vertical: 4, horizontal: 6)
-                                  .copyWith(right: 0),
+                                  vertical: 8),
                               child: InkWell(
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        ProfileScreen(
-                                          uid: nextPost['uid'],
-                                        ),
+                                    builder: (context) => ProfileScreen(
+                                      uid: nextPost['uid'],
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -121,24 +117,24 @@ class _FeedScreenState extends State<FeedScreen> {
                                     CircleAvatar(
                                       radius: 16,
                                       backgroundImage:
-                                      NetworkImage(nextPost['userImage']),
+                                          NetworkImage(nextPost['userImage']),
                                     ),
                                     Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(left: 8),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
                                             CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                nextPost['username'],
-                                                style: TextStyle(
-                                                    fontWeight: FontWeight.bold),
-                                              ),
-                                            ],
+                                        children: [
+                                          Text(
+                                            nextPost['username'],
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold),
                                           ),
-                                        )),
+                                        ],
+                                      ),
+                                    )),
                                     IconButton(
                                         onPressed: () {
                                           showDialog(
@@ -146,60 +142,65 @@ class _FeedScreenState extends State<FeedScreen> {
                                             builder: (context) => Dialog(
                                               child: _uid != nextPost['uid']
                                                   ? ListView(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 16),
-                                                  shrinkWrap: true,
-                                                  children: [
-                                                    'Cancel',
-                                                  ]
-                                                      .map(
-                                                        (e) => InkWell(
-                                                        child: Container(
-                                                          padding: const EdgeInsets
+                                                      padding: const EdgeInsets
                                                               .symmetric(
-                                                              vertical:
-                                                              12,
-                                                              horizontal:
-                                                              16),
-                                                          child: Text(e),
-                                                        ),
-                                                        onTap: () {
-                                                          // remove the dialog box
-                                                          Navigator.of(
-                                                              context)
-                                                              .pop();
-                                                        }),
-                                                  )
-                                                      .toList())
+                                                          vertical: 16),
+                                                      shrinkWrap: true,
+                                                      children: [
+                                                        'Cancel',
+                                                      ]
+                                                          .map(
+                                                            (e) => InkWell(
+                                                                child:
+                                                                    Container(
+                                                                  padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                      vertical:
+                                                                          12,
+                                                                      horizontal:
+                                                                          16),
+                                                                  child:
+                                                                      Text(e),
+                                                                ),
+                                                                onTap: () {
+                                                                  // remove the dialog box
+                                                                  Navigator.of(
+                                                                          context)
+                                                                      .pop();
+                                                                }),
+                                                          )
+                                                          .toList())
                                                   : ListView(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 16),
-                                                  shrinkWrap: true,
-                                                  children: [
-                                                    'Delete',
-                                                  ]
-                                                      .map(
-                                                        (e) => InkWell(
-                                                        child: Container(
-                                                          padding: const EdgeInsets
+                                                      padding: const EdgeInsets
                                                               .symmetric(
-                                                              vertical:
-                                                              12,
-                                                              horizontal:
-                                                              16),
-                                                          child: Text(e),
-                                                        ),
-                                                        onTap: () {
-                                                          deletePost(key);
-                                                          // remove the dialog box
-                                                          Navigator.of(
-                                                              context)
-                                                              .pop();
-                                                        }),
-                                                  )
-                                                      .toList()),
+                                                          vertical: 16),
+                                                      shrinkWrap: true,
+                                                      children: [
+                                                        'Delete',
+                                                      ]
+                                                          .map(
+                                                            (e) => InkWell(
+                                                                child:
+                                                                    Container(
+                                                                  padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                      vertical:
+                                                                          12,
+                                                                      horizontal:
+                                                                          16),
+                                                                  child:
+                                                                      Text(e),
+                                                                ),
+                                                                onTap: () {
+                                                                  deletePost(
+                                                                      key);
+                                                                  // remove the dialog box
+                                                                  Navigator.of(
+                                                                          context)
+                                                                      .pop();
+                                                                }),
+                                                          )
+                                                          .toList()),
                                             ),
                                           );
                                         },
@@ -210,21 +211,29 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
 
                             //BODY POST - IMAGE
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.35,
-                              width: double.infinity,
-                              child: Image.network(
-                                nextPost['postImage'],
-                                fit: BoxFit.cover,
+                            InkWell(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (context) => DetailPostScreen(
+                                        postId: key,
+                                        userPost: nextPost['uid'])),
+                              ),
+                              child: SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.35,
+                                width: double.infinity,
+                                child: Image.network(
+                                  nextPost['postImage'],
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-
                             //LIKE COMMENT
                             Row(
                               children: [
                                 IconButton(
-                                  onPressed: () =>
-                                      likePost(key, _uid, likeOfPosts[key], nextPost['uid']),
+                                  onPressed: () => likePost(key, _uid,
+                                      likeOfPosts[key], nextPost['uid']),
                                   icon: likeOfPosts[key].containsKey(_uid)
                                       ? const Icon(
                                           Icons.favorite,
@@ -238,8 +247,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                     onPressed: () => Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) => CommentScreen(
-                                              postId: key, userPost: nextPost['uid']
-                                            ),
+                                                postId: key,
+                                                userPost: nextPost['uid']),
                                           ),
                                         ),
                                     icon: Icon(
@@ -275,7 +284,9 @@ class _FeedScreenState extends State<FeedScreen> {
                                           .copyWith(
                                               fontWeight: FontWeight.w800),
                                       child: Text(
-                                        '${countLike} likes',
+                                        countLike != 1 && countLike != 0
+                                            ?'${countLike} likes'
+                                            :'${countLike} like',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyText2,
@@ -318,16 +329,17 @@ class _FeedScreenState extends State<FeedScreen> {
                                     onTap: () => Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) => CommentScreen(
-                                          postId: key, userPost: nextPost['uid'],
+                                          postId: key,
+                                          userPost: nextPost['uid'],
                                         ),
                                       ),
                                     ),
                                   ),
                                   Container(
                                     child: Text(
-                                      Jiffy(DateTime
-                                          .fromMillisecondsSinceEpoch(
-                                          nextPost['datePublished'])).fromNow(),
+                                      Jiffy(DateTime.fromMillisecondsSinceEpoch(
+                                              nextPost['datePublished']))
+                                          .fromNow(),
                                       style: const TextStyle(
                                         color: secondaryColor,
                                       ),
@@ -357,6 +369,7 @@ class _FeedScreenState extends State<FeedScreen> {
               return ListView(
                 children: tileList,
               );
+
             },
           );
         },
@@ -364,21 +377,23 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void likePost(String key, String uid, Map list, String userPost) async{
+  void likePost(String postId, String uid, Map list, String userPost) async {
     final ref = await FirebaseDatabase.instance.ref('likes/');
     if (list.containsKey(uid)) {
-      ref.child(key).update({uid: null});
+      ref.child(postId).update({uid: null});
     } else {
-      ref.child(key).update({uid: true});
-      final snapshot = await FirebaseDatabase.instance.ref().child('users').child(uid).get();
+      ref.child(postId).update({uid: true});
+      final snapshot =
+          await FirebaseDatabase.instance.ref().child('users').child(uid).get();
       final data =
-      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
-      final notifications = FirebaseDatabase.instance.ref("notifications").child('${userPost}');
+          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      final notifications =
+          FirebaseDatabase.instance.ref("notifications").child('${userPost}');
       notifications.push().set({
-        'username' : data['name'],
+        'username': data['name'],
         'userImg': data['photoUrl'],
-        'text' : "liked on your post",
-        'datePublished' : DateTime.now().millisecondsSinceEpoch
+        'text': "liked on your post",
+        'datePublished': DateTime.now().millisecondsSinceEpoch
       });
     }
   }

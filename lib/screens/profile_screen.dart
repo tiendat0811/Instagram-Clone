@@ -236,7 +236,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       }else{
                                         checkKey = Map<String, dynamic>.from(isHasKey2.value as Map<dynamic, dynamic>);
                                       }
-                                      print(checkKey);
                                       keyChat = checkKey['chatHistory'];
                                       lastMess = checkKey['lastMess'];
                                       datePublished = checkKey['datePublished'];

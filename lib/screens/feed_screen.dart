@@ -6,7 +6,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:instagram_clone/screens/chats_screen.dart';
 import 'package:instagram_clone/screens/profile_screen.dart';
 import 'package:instagram_clone/utils/colors.dart';
-import 'package:intl/intl.dart';
 import 'package:jiffy/jiffy.dart';
 import '../utils/utils.dart';
 import 'comment_screen.dart';
@@ -97,15 +96,14 @@ class _FeedScreenState extends State<FeedScreen> {
                       title: Container(
                         color: mobileBackgroundColor,
                         padding: const EdgeInsets.symmetric(
-                          vertical: 10,
+                          vertical: 8
                         ),
                         child: Column(
                           children: [
                             //HEADER POST
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                      vertical: 4, horizontal: 6)
-                                  .copyWith(right: 0),
+                                  vertical: 8),
                               child: InkWell(
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -286,7 +284,9 @@ class _FeedScreenState extends State<FeedScreen> {
                                           .copyWith(
                                               fontWeight: FontWeight.w800),
                                       child: Text(
-                                        '${countLike} likes',
+                                        countLike != 1 && countLike != 0
+                                            ?'${countLike} likes'
+                                            :'${countLike} like',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyText2,
@@ -369,6 +369,7 @@ class _FeedScreenState extends State<FeedScreen> {
               return ListView(
                 children: tileList,
               );
+
             },
           );
         },
@@ -376,12 +377,12 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void likePost(String key, String uid, Map list, String userPost) async {
+  void likePost(String postId, String uid, Map list, String userPost) async {
     final ref = await FirebaseDatabase.instance.ref('likes/');
     if (list.containsKey(uid)) {
-      ref.child(key).update({uid: null});
+      ref.child(postId).update({uid: null});
     } else {
-      ref.child(key).update({uid: true});
+      ref.child(postId).update({uid: true});
       final snapshot =
           await FirebaseDatabase.instance.ref().child('users').child(uid).get();
       final data =

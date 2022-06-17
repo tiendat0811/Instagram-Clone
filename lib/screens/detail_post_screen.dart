@@ -1,87 +1,135 @@
 import 'dart:collection';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/screens/comment_screen.dart';
-//import 'package:instagram_clone/screens/profile_screen.dart';
+import 'package:instagram_clone/screens/profile_screen.dart';
+
 import 'package:instagram_clone/utils/colors.dart';
 import 'package:instagram_clone/utils/utils.dart';
 import 'package:jiffy/jiffy.dart';
 
-
 class DetailPostScreen extends StatefulWidget {
   final postId, userPost;
 
-  const DetailPostScreen({Key? key,required this.postId, required this.userPost}) : super(key: key);
+  const DetailPostScreen(
+      {Key? key, required this.postId, required this.userPost})
+      : super(key: key);
 
   @override
   State<DetailPostScreen> createState() => _DetailPostScreenState();
 }
 
 class _DetailPostScreenState extends State<DetailPostScreen> {
-  final TextEditingController commentEditingController = TextEditingController();
-  final Map userInfo = <String, dynamic>{
-    'uid': 'uid',
-    'name': '',
-    'email': '',
-    'photoUrl': "https://images.squarespace-cdn.com/content/v1/54b7b93ce4b0a3e130d5d232/1519987020970-8IQ7F6Z61LLBCX85A65S/icon.png?format=1000w",
-    'bio': '',
-  };
+  final _uid = FirebaseAuth.instance.currentUser!.uid;
+  final TextEditingController commentEditingController =
+      TextEditingController();
+  var post = {};
+  var userInfo = {};
+  bool isLoading = false;
+  late FocusNode myFocusNode;
+  bool liked = false;
+  int countLike = 0;
+
   void getUser() async {
-    String uid = FirebaseAuth.instance.currentUser!.uid;
-    final ref = FirebaseDatabase.instance.ref();
-    final snapshot = await ref.child('users/$uid').get();
+    setState(() {
+      isLoading = true;
+    });
+    String uid = await FirebaseAuth.instance.currentUser!.uid;
+    final snapshot =
+        await FirebaseDatabase.instance.ref().child('users/$uid').get();
     if (snapshot.exists) {
       final data =
-      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
-      setState(() {
-        userInfo.update('uid', (value) => uid);
-        userInfo.update('name', (value) => data['username']);
-        userInfo.update('email', (value) => data['email']);
-        userInfo.update('photoUrl', (value) => data['photoUrl']);
-        userInfo.update('bio', (value) => data['bio']);
-      });
+          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      userInfo = data;
+      setState(() {});
     } else {
       print('No data available.');
     }
+    setState(() {
+      isLoading = false;
+    });
   }
+
+  void getPost() async {
+    setState(() {
+      isLoading = true;
+    });
+    final ref = FirebaseDatabase.instance.ref();
+    final postSnapshot = await ref.child('posts/${widget.postId}').get();
+    if (postSnapshot.exists) {
+      final data =
+          Map<String, dynamic>.from(postSnapshot.value as Map<dynamic, dynamic>);
+      post = data;
+      setState(() {});
+    } else {
+      print('No data available.');
+    }
+
+    //get like info
+    final likeSnapshot = await ref.child('likes/${widget.postId}').get();
+    if (likeSnapshot.exists) {
+      final data =
+      Map<String, dynamic>.from(likeSnapshot.value as Map<dynamic, dynamic>);
+      if(data.containsKey(_uid)){
+        liked = true;
+      }
+      countLike = data.length - 1;
+      setState(() {});
+    } else {
+      print('No data available.');
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    getPost();
     getUser();
+    myFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
+    myFocusNode.dispose();
     super.dispose();
   }
 
-  final _uid = FirebaseAuth.instance.currentUser!.uid;
-
-  void likePost(String key, String uid, Map list, String userPost) async {
+  void likePost(String key, String uid, String userPost) async {
     final ref = await FirebaseDatabase.instance.ref('likes/');
+
+    final likeSnapshot = await ref.child(widget.postId).get();
+    final list = Map<String, dynamic>.from(likeSnapshot.value as Map<dynamic, dynamic>);
     if (list.containsKey(uid)) {
       ref.child(key).update({uid: null});
+      liked = false;
+      countLike --;
     } else {
       ref.child(key).update({uid: true});
-      final snapshot = await FirebaseDatabase.instance.ref()
-          .child('users')
-          .child(uid)
-          .get();
+      liked = true;
+      countLike ++;
+      final snapshot =
+          await FirebaseDatabase.instance.ref().child('users').child(uid).get();
       final data =
-      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
-      final notifications = FirebaseDatabase.instance.ref("notifications")
-          .child('${userPost}');
+          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      final notifications =
+          FirebaseDatabase.instance.ref("notifications").child('${userPost}');
       notifications.push().set({
         'username': data['name'],
         'userImg': data['photoUrl'],
         'text': "liked on your post",
-        'datePublished': DateTime
-            .now()
-            .millisecondsSinceEpoch
+        'datePublished': DateTime.now().millisecondsSinceEpoch
       });
     }
+    setState(() {
+
+    });
   }
+
   void deletePost(String postId) async {
     String res = "ERROR";
     try {
@@ -96,38 +144,43 @@ class _DetailPostScreenState extends State<DetailPostScreen> {
     }
   }
 
-
   void postComment() async {
     String res = "ERROR";
     try {
-
-      DatabaseReference ref = await FirebaseDatabase.instance.ref("comments/${widget.postId}/").push();
+      DatabaseReference ref = await FirebaseDatabase.instance
+          .ref("comments/${widget.postId}/")
+          .push();
       Map<String, dynamic> cmtInfo = {
         'text': commentEditingController.text,
-        'username': userInfo["name"],
+        'username': userInfo["username"],
         'userImage': userInfo["photoUrl"],
         'datePublished': DateTime.now().millisecondsSinceEpoch,
-        'uid' : userInfo['uid']
+        'uid': _uid
       };
       ref.set(cmtInfo);
       res = 'success';
 
-      final snapshot = await FirebaseDatabase.instance.ref("posts/${widget.postId}/").get();
+      final snapshot =
+          await FirebaseDatabase.instance.ref("posts/${widget.postId}/").get();
       if (snapshot.exists) {
         final data =
-        Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+            Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
         int count = data['countCmt'];
         count++;
-        await FirebaseDatabase.instance.ref("posts/${widget.postId}/").update({'countCmt': count});
+        await FirebaseDatabase.instance
+            .ref("posts/${widget.postId}/")
+            .update({'countCmt': count});
       }
 
       //notification
-      final notifications = await FirebaseDatabase.instance.ref("notifications").child('${widget.userPost}');
+      final notifications = await FirebaseDatabase.instance
+          .ref("notifications")
+          .child('${widget.userPost}');
       notifications.push().set({
-        'username' : userInfo['name'],
+        'username': userInfo['name'],
         'userImg': userInfo['photoUrl'],
-        'text' : "commented on your post",
-        'datePublished' : DateTime.now().millisecondsSinceEpoch
+        'text': "commented on your post",
+        'datePublished': DateTime.now().millisecondsSinceEpoch
       });
 
       if (res != 'success') {
@@ -147,242 +200,384 @@ class _DetailPostScreenState extends State<DetailPostScreen> {
 
   @override
   Widget build(BuildContext context) {
-     return Scaffold(
-       appBar: AppBar(
-         backgroundColor: mobileBackgroundColor,
-         title: const Text('Detail Post'),
-         centerTitle: false,
-       ),
-       body: StreamBuilder(
-           stream: FirebaseDatabase.instance
-               .ref('likes/')
-               .onValue,
-           builder: (context, snapshotlike){
-             return StreamBuilder(stream: FirebaseDatabase.instance
-                 .ref('posts/')
-                 .onValue,
-               builder: (context, snapshot) {
-                 final tileList = <ListTile>[];
-                 if (snapshot.hasData) {
-                   DatabaseEvent dataValues = snapshot.data! as DatabaseEvent;
-                   DatabaseEvent likeValues = snapshotlike.data! as DatabaseEvent;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: mobileBackgroundColor,
+        title: const Text('Post'),
+        centerTitle: false,
+      ),
+      body: Container(
+        color: mobileBackgroundColor,
+        padding: const EdgeInsets.symmetric(
+          vertical: 10,
+        ),
+        child: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : ListView(
+                children: [
+                  //HEADER POST
+                  Container(
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 4, horizontal: 6)
+                              .copyWith(right: 0),
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ProfileScreen(
+                              uid: post['uid'],
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundImage: NetworkImage(post['userImage']),
+                            ),
+                            Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        post['username'],
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                            IconButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      child: _uid != post['uid']
+                                          ? ListView(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          shrinkWrap: true,
+                                          children: [
+                                            'Cancel',
+                                          ]
+                                              .map(
+                                                (e) => InkWell(
+                                                child: Container(
+                                                  padding:
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 16),
+                                                  child: Text(e),
+                                                ),
+                                                onTap: () {
+                                                  // remove the dialog box
+                                                  Navigator.of(context)
+                                                      .pop();
+                                                }),
+                                          )
+                                              .toList())
+                                          : ListView(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          shrinkWrap: true,
+                                          children: [
+                                            'Delete',
+                                          ]
+                                              .map(
+                                                (e) => InkWell(
+                                                child: Container(
+                                                  padding:
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 16),
+                                                  child: Text(e),
+                                                ),
+                                                onTap: () {
+                                                  deletePost(
+                                                      widget.postId);
+                                                  // remove the dialog box
+                                                  Navigator.of(context)
+                                                      .pop();
+                                                }),
+                                          )
+                                              .toList()),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.more_vert)),
+                          ],
+                        ),
+                      )
+                  ),
 
-                   if (dataValues.snapshot.exists) {
-                     final myPosts = Map<String, dynamic>.from(
-                         dataValues.snapshot.value as Map<dynamic, dynamic>);
+                  //BODY POST - IMAGE
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.35,
+                    width: double.infinity,
+                    child: Image.network(
+                      post['postImage'],
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  //LIKE COMMENT
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => likePost(widget.postId, _uid, post['uid']),
+                        icon: liked
+                            ? const Icon(
+                          Icons.favorite,
+                          color: Colors.red,
+                        )
+                            : const Icon(
+                          Icons.favorite_border,
+                        ),
+                      ),
+                      IconButton(
+                          onPressed: () {
+                            myFocusNode.requestFocus();
+                          },
 
-                     final likeOfPosts = Map<String, dynamic>.from(
-                         likeValues.snapshot.value as Map<dynamic, dynamic>);
+                          icon: const Icon(
+                            Icons.comment_outlined,
+                          )),
+                      IconButton(
+                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.send_outlined,
+                          )),
+                      Expanded(
+                          child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: IconButton(
+                            icon: const Icon(Icons.bookmark_border),
+                            onPressed: () {}),
+                      ))
+                    ],
+                  ),
 
-                     //sort by time
-                     var sortByValue = SplayTreeMap<String, dynamic>.from(
-                         myPosts,
-                             (key2, key1) =>
-                             myPosts[key1]['datePublished']
-                                 .compareTo(myPosts[key2]['datePublished']));
-
-                     sortByValue.forEach((key, value) {
-                       int countLike = 0;
-                       if (likeValues.snapshot.exists) {
-                         countLike =
-                             Map<String, dynamic>.from(likeOfPosts[key]).length -
-                                 1;
-                       }
-
-                       final nextPost = Map<String, dynamic>.from(value);
-                       ListTile(
-                         title: Container(
-                           color: mobileBackgroundColor,
-                           padding: const EdgeInsets.symmetric(
-                             vertical: 10,
-                           ),
-                           child: Column(
-                             children: [
-                               //HEADER POST
-                               //BODY POST - IMAGE
-
-                               InkWell(
-                                 onTap:() => Navigator.of(context).push(
-                                   MaterialPageRoute(
-                                     builder: (context) =>
-                                         DetailPostScreen(
-                                             postId: key,
-                                             userPost: nextPost['uid']
-                                         ),
-                                   ),
-                                 ),
-                                 child: SizedBox(
-                                   height: MediaQuery
-                                       .of(context)
-                                       .size
-                                       .height * 0.35,
-                                   width: double.infinity,
-                                   child: Image.network(
-                                     nextPost['postImage'],
-                                     fit: BoxFit.cover,
-                                   ),
-                                 ),
-                               ),
-                               //LIKE COMMENT
-                               Row(
-                                 children: [
-                                   IconButton(
-                                     onPressed: () =>
-                                         likePost(key, _uid, likeOfPosts[key],
-                                             nextPost['uid']),
-                                     icon: likeOfPosts[key].containsKey(_uid)
-                                         ? const Icon(
-                                       Icons.favorite,
-                                       color: Colors.red,
-                                     )
-                                         : const Icon(
-                                       Icons.favorite_border,
-                                     ),
-                                   ),
-                                   IconButton(
-                                       onPressed: () =>
-                                           Navigator.of(context).push(
-                                             MaterialPageRoute(
-                                               builder: (context) =>
-                                                   CommentScreen(
-                                                       postId: key,
-                                                       userPost: nextPost['uid']
-                                                   ),
-                                             ),
-                                           ),
-                                       icon: Icon(
-                                         Icons.comment_outlined,
-                                       )),
-                                   IconButton(
-                                       onPressed: () {},
-                                       icon: Icon(
-                                         Icons.send_outlined,
-                                       )),
-                                   Expanded(
-                                       child: Align(
-                                         alignment: Alignment.bottomRight,
-                                         child: IconButton(
-                                             icon: const Icon(
-                                                 Icons.bookmark_border),
-                                             onPressed: () {}),
-                                       ))
-                                 ],
-                               ),
-
-                               //DESCRIPTION
-                               Container(
-                                 padding:
-                                 const EdgeInsets.symmetric(horizontal: 16),
-                                 child: Column(
-                                   mainAxisSize: MainAxisSize.min,
-                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                   children: <Widget>[
-                                     DefaultTextStyle(
-                                         style: Theme
-                                             .of(context)
-                                             .textTheme
-                                             .subtitle2!
-                                             .copyWith(
-                                             fontWeight: FontWeight.w800),
-                                         child: Text(
-                                           '${countLike} likes',
-                                           style: Theme
-                                               .of(context)
-                                               .textTheme
-                                               .bodyText2,
-                                         )),
-                                     Container(
-                                       width: double.infinity,
-                                       padding: const EdgeInsets.only(
-                                         top: 8,
-                                       ),
-                                       child: RichText(
-                                         text: TextSpan(
-                                           style: const TextStyle(
-                                               color: primaryColor),
-                                           children: [
-                                             TextSpan(
-                                               text: nextPost["username"],
-                                               style: const TextStyle(
-                                                 fontWeight: FontWeight.bold,
-                                               ),
-                                             ),
-                                             TextSpan(
-                                               text: " " + nextPost["description"],
-                                             ),
-                                           ],
-                                         ),
-                                       ),
-                                     ),
-                                     Container(
-                                       child: Text(
-                                         Jiffy(DateTime
-                                             .fromMillisecondsSinceEpoch(
-                                             nextPost['datePublished'])).fromNow(),
-                                         style: const TextStyle(
-                                           color: secondaryColor,
-                                         ),
-                                       ),
-                                       padding:
-                                       const EdgeInsets.symmetric(vertical: 4),
-                                     ),
-                                   ],
-                                 ),
-                               ),
-                             ],
-                           ),
-                         ),
-                       );
-                     });
-                   }
-                 }
-                 return ListView(
-                   children: tileList,
-                 );
-               },
-             );
-           },
-       ),
-       bottomNavigationBar: SafeArea(
-         child: Container(
-           height: kToolbarHeight,
-           margin:
-           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-           padding: const EdgeInsets.only(left: 16, right: 8),
-           child: Row(
-             children: [
-               CircleAvatar(
-                 backgroundImage: NetworkImage(userInfo['photoUrl']),
-                 radius: 18,
-               ),
-               Expanded(
-                 child: Padding(
-                   padding: const EdgeInsets.only(left: 16, right: 8),
-                   child: TextField(
-                     controller: commentEditingController,
-                     decoration: InputDecoration(
-                       hintText: 'Comment as ${userInfo['name']}',
-                       border: InputBorder.none,
-                     ),
-                   ),
-                 ),
-               ),
-               InkWell(
-                 onTap: () => postComment(),
-                 child: Container(
-                   padding:
-                   const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                   child: const Text(
-                     'Post',
-                     style: TextStyle(color: Colors.blue),
-                   ),
-                 ),
-               )
-             ],
-           ),
-         ),
-       ),
-     );
-
+                  //DESCRIPTION AND COMMENT
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        DefaultTextStyle(
+                            style: Theme.of(context)
+                                .textTheme
+                                .subtitle2!
+                                .copyWith(fontWeight: FontWeight.w800),
+                            child: Text(
+                              countLike != 1 && countLike != 0
+                              ?'${countLike} likes'
+                              :'${countLike} like',
+                              style: Theme.of(context).textTheme.bodyText2,
+                            )
+                        ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.only(
+                            top: 8,
+                          ),
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(color: primaryColor),
+                              children: [
+                                TextSpan(
+                                  text: post["username"],
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: " " + post["description"],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            Jiffy(DateTime.fromMillisecondsSinceEpoch(
+                                    post['datePublished']))
+                                .fromNow(),
+                            style: const TextStyle(
+                              color: secondaryColor,
+                            ),
+                          ),
+                        ),
+                        StreamBuilder(
+                          stream: FirebaseDatabase.instance
+                              .ref('comments/${widget.postId}')
+                              .onValue,
+                          builder: (context, snapshot) {
+                            final commentList = <ListTile>[];
+                            if (snapshot.hasData) {
+                              DatabaseEvent comments =
+                                  snapshot.data! as DatabaseEvent;
+                              if (comments.snapshot.exists) {
+                                final commentsData = Map<String, dynamic>.from(
+                                    comments.snapshot.value
+                                        as Map<dynamic, dynamic>);
+                                var sortByValue =
+                                    SplayTreeMap<String, dynamic>.from(commentsData,
+                                        (key2, key1) => commentsData[key1]
+                                                ['datePublished']
+                                            .compareTo(commentsData[key2]
+                                                ['datePublished']));
+                                sortByValue.forEach((key, value) {
+                                  final nextComment =
+                                      Map<String, dynamic>.from(value);
+                                  final commentTile = ListTile(
+                                    title: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      child: Row(
+                                        children: [
+                                          InkWell(
+                                            onTap: () => Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) => ProfileScreen(
+                                                  uid: nextComment['uid'],
+                                                ),
+                                              ),
+                                            ),
+                                            child: CircleAvatar(
+                                              backgroundImage: NetworkImage(
+                                                nextComment['userImage'],
+                                              ),
+                                              radius: 18,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 16),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  RichText(
+                                                    text: TextSpan(
+                                                      children: [
+                                                        TextSpan(
+                                                            text: nextComment[
+                                                                'username'],
+                                                            style:
+                                                                const TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            )),
+                                                        TextSpan(
+                                                          text: " " +
+                                                              nextComment[
+                                                                  'text'],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 4),
+                                                    child: Text(
+                                                      Jiffy(DateTime
+                                                              .fromMillisecondsSinceEpoch(
+                                                                  nextComment[
+                                                                      'datePublished']))
+                                                          .fromNow(),
+                                                      style: const TextStyle(
+                                                        color: secondaryColor,
+                                                      ),
+                                                    ),
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                  commentList.add(commentTile);
+                                });
+                              } else {
+                                final empty = ListTile(
+                                  title: Center(
+                                    child: Text("There are no comments yet"),
+                                  ),
+                                );
+                                commentList.add(empty);
+                              }
+                            }
+                            return ListView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              children: commentList,
+                            );
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: kToolbarHeight,
+          margin:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: const EdgeInsets.only(left: 16, right: 8),
+          child: Row(
+            children: [
+              userInfo['photoUrl'] == null
+                  ? Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : CircleAvatar(
+                      backgroundImage: NetworkImage(userInfo['photoUrl']),
+                      radius: 18,
+                    ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: TextField(
+                    focusNode: myFocusNode,
+                    controller: commentEditingController,
+                    decoration: InputDecoration(
+                      hintText: 'Comment as ${userInfo['username']}',
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () => postComment(),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  child: const Text(
+                    'Post',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

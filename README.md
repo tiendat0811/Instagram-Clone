@@ -1,9 +1,4 @@
 Instagram Clone
 
-By:
+Flutter - Firebase Realtime Database/Firebase Storage/Firebase Authentication(Gmail, Facebook)
 
-- Pham Tien Dat
-- Nguyen Anh Tai
-- Nguyen Thanh Luan
-- Tran Thai Bao
-- Nguyen Ho Thanh Son

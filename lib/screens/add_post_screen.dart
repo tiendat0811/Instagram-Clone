@@ -3,9 +3,10 @@ import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instagram_clone/utils/colors.dart';
-import 'package:instagram_clone/utils/utils.dart';
+import '/utils/utils.dart';
 import '../resources/storage_methods.dart';
 
 class AddPostScreen extends StatefulWidget {
@@ -19,13 +20,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   bool isLoading = false;
   Uint8List? _file;
-  Map userInfo = <String, dynamic>{
-    'uid': 'uid',
-    'name': '',
-    'email': '',
-    'photoUrl': '',
-    'bio': '',
-  };
+  var userData = {};
+  final _uid = FirebaseAuth.instance.currentUser!.uid;
 
   void postImage(String uid, String username, String profImage) async {
     setState(() {
@@ -41,21 +37,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
       Map<String, dynamic> postInfo = {
         'description': _descriptionController.text,
         'postImage': postUrl,
-        'uid': userInfo["uid"],
-        'username': userInfo["name"],
-        'userImage': userInfo["photoUrl"],
+        'uid': _uid,
         'datePublished': DateTime.now().millisecondsSinceEpoch,
-        'countCmt': 0
       };
       ref.set(postInfo);
-      FirebaseDatabase.instance
-          .ref("likes/")
-          .child(postId)
-          .set({"start": false});
+
       res = 'addPost success';
       if (res == "addPost success") {
         setState(() {
           isLoading = false;
+          _descriptionController.text = "";
         });
         showSnackBar('Posted!', context);
         clearImage();
@@ -95,11 +86,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       final data =
           Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
       setState(() {
-        userInfo.update('uid', (value) => uid);
-        userInfo.update('name', (value) => data['username']);
-        userInfo.update('email', (value) => data['email']);
-        userInfo.update('photoUrl', (value) => data['photoUrl']);
-        userInfo.update('bio', (value) => data['bio']);
+        userData = data;
       });
     } else {
       print('No data available.');
@@ -160,20 +147,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
           )
         : Scaffold(
             appBar: AppBar(
-              backgroundColor: mobileBackgroundColor,
+              iconTheme: IconThemeData(
+                color: Theme.of(context).primaryColor,
+              ),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: clearImage,
               ),
               title: Text(
                 "New post",
+                style: TextStyle(color: Theme.of(context).primaryColor),
               ),
               actions: <Widget>[
                 TextButton(
                   onPressed: () => postImage(
-                      userInfo["uid"].toString(),
-                      userInfo["username"].toString(),
-                      userInfo["photoUrl"].toString()),
+                      _uid,
+                      userData["username"],
+                      userData["photoUrl"]),
                   child: const Text(
                     "Post",
                     style: TextStyle(
@@ -184,37 +175,40 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 )
               ],
             ),
-            body: ListView(
-              shrinkWrap: true,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(userInfo["photoUrl"]),
-                    ),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.3,
-                      child: TextField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                            hintText: "Write a caption...",
-                            border: InputBorder.none),
-                        maxLines: 8,
+            body: isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: EdgeInsets.only(top: 20),
+                    shrinkWrap: true,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundImage: NetworkImage(userData["photoUrl"]),
+                          ),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.6,
+                            child: TextField(
+                              controller: _descriptionController,
+                              decoration: const InputDecoration(
+                                  hintText: "Write a caption...",
+                                  border: InputBorder.none),
+                              maxLines: 3,
+                            ),
+                          ),
+                          const Divider(),
+                        ],
                       ),
-                    ),
-                    const Divider(),
-                  ],
-                ),
-                Container(
-                  padding: EdgeInsets.all(10),
-                  child: Image(fit: BoxFit.fitWidth, image: MemoryImage(_file!)),
-                )
-                
-              ],
-            ),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        child: Image(
+                            fit: BoxFit.fitWidth, image: MemoryImage(_file!)),
+                      )
+                    ],
+                  ),
           );
   }
 }

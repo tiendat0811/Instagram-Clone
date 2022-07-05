@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instagram_clone/resources/auth_methods.dart';
-import 'package:instagram_clone/screens/home_screen.dart';
-import 'package:instagram_clone/utils/colors.dart';
-import 'package:instagram_clone/utils/utils.dart';
-import 'package:instagram_clone/widgets/text_field_input.dart';
+import '/resources/auth_methods.dart';
+import '/screens/home_screen.dart';
+import '/utils/utils.dart';
+import '/widgets/text_field_input.dart';
 
 import 'login_screen.dart';
 
@@ -23,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _fullnameController = TextEditingController();
   Uint8List? _image;
   bool _isLoading = false;
 
@@ -30,12 +30,13 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _isLoading = true;
     });
-    if(_image != null){
+    if (_image != null) {
       String res = await AuthMethods().signUpUser(
           email: _emailController.text,
           password: _passwordController.text,
           username: _usernameController.text,
           bio: _bioController.text,
+          fullname: _fullnameController.text,
           file: _image!);
       setState(() {
         _isLoading = false;
@@ -44,16 +45,17 @@ class _SignupScreenState extends State<SignupScreen> {
       if (res != 'sign up success') {
         showSnackBar(res, context);
       } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => HomeScreen()));
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()));
       }
-    }else{
+    } else {
       showSnackBar("You must upload your avatar!", context);
       setState(() {
         _isLoading = false;
       });
     }
-
   }
 
   void selectImage() async {
@@ -64,8 +66,9 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void navigateToLogin() {
+    if (!mounted) return;
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => const LoginScreen()));
+        .pushReplacement(MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
   @override
@@ -75,6 +78,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _passwordController.dispose();
     _bioController.dispose();
     _usernameController.dispose();
+    _fullnameController.dispose();
   }
 
   @override
@@ -82,19 +86,21 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: ListView(
+          child: _isLoading
+          ? const Center(child: CircularProgressIndicator(),)
+          : ListView(
             shrinkWrap: true,
-            padding: EdgeInsets.all(30),
+            padding: const EdgeInsets.all(30),
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SvgPicture.asset(
                     'assets/ic_instagram.svg',
-                    color: primaryColor,
+                    color: Theme.of(context).primaryColor,
                     height: 64,
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 22,
                   ),
                   Stack(
@@ -104,7 +110,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               radius: 54,
                               backgroundImage: MemoryImage(_image!),
                             )
-                          : CircleAvatar(
+                          : const CircleAvatar(
                               radius: 54,
                               backgroundImage: NetworkImage(
                                   "https://images.squarespace-cdn.com/content/v1/54b7b93ce4b0a3e130d5d232/1519987020970-8IQ7F6Z61LLBCX85A65S/icon.png?format=1000w"),
@@ -113,72 +119,85 @@ class _SignupScreenState extends State<SignupScreen> {
                         bottom: -10,
                         left: 70,
                         child: IconButton(
-                            icon: Icon(Icons.add_a_photo),
+                            icon: const Icon(Icons.add_a_photo),
                             onPressed: selectImage),
                       )
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 24,
+                  ),
+                  TextFieldInput(
+                    textEditingController: _emailController,
+                    hintText: "Enter your Email",
+                    textInputType: TextInputType.emailAddress,
+                    label: "Email",
+                  ),
+                  //password
+                  const SizedBox(
+                    height: 12,
+                  ),
+                  TextFieldInput(
+                    textEditingController: _passwordController,
+                    hintText: "Enter your Password",
+                    textInputType: TextInputType.text,
+                    isPass: true,
+                    label: "Password",
+                  ),
+                  const SizedBox(
+                    height: 12,
                   ),
                   //username
                   TextFieldInput(
-                      textEditingController: _usernameController,
-                      hintText: "Enter your Username",
-                      textInputType: TextInputType.text),
+                    textEditingController: _usernameController,
+                    hintText: "Enter your Username",
+                    textInputType: TextInputType.text,
+                    label: "Username",
+                  ),
                   //password
-                  SizedBox(
+                  const SizedBox(
                     height: 12,
                   ),
-                  //email
+
                   TextFieldInput(
-                      textEditingController: _emailController,
-                      hintText: "Enter your Email",
-                      textInputType: TextInputType.emailAddress),
-                  //password
-                  SizedBox(
-                    height: 12,
+                    textEditingController: _fullnameController,
+                    hintText: "Enter your fullname",
+                    textInputType: TextInputType.text,
+                    label: "Fullname",
                   ),
-                  TextFieldInput(
-                      textEditingController: _passwordController,
-                      hintText: "Enter your Password",
-                      textInputType: TextInputType.text,
-                      isPass: true),
-                  SizedBox(
+                  //password
+                  const SizedBox(
                     height: 12,
                   ),
                   //bio
                   TextFieldInput(
-                      textEditingController: _bioController,
-                      hintText: "Enter your bio",
-                      textInputType: TextInputType.text),
+                    textEditingController: _bioController,
+                    hintText: "Enter your bio",
+                    textInputType: TextInputType.text,
+                    label: "Your bio",
+                  ),
                   //password
-                  SizedBox(
+                  const SizedBox(
                     height: 24,
                   ),
                   InkWell(
                     onTap: signUpUser,
                     child: Container(
-                      child: _isLoading
-                          ? Center(
-                              child: CircularProgressIndicator(
-                                color: primaryColor,
-                              ),
-                            )
-                          : Text("Sign up",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
                       width: double.infinity,
                       alignment: Alignment.center,
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      decoration: ShapeDecoration(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: const ShapeDecoration(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(Radius.circular(4)),
                         ),
-                        color: blueColor,
+                        color: Colors.blue,
                       ),
+                      child: const Text("Sign up",
+                              style:
+                                  TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 12,
                   ),
 
@@ -186,17 +205,17 @@ class _SignupScreenState extends State<SignupScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        child: Text("Do you already have an account?"),
-                        padding: EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: const Text("Do you already have an account?"),
                       ),
                       GestureDetector(
                         onTap: navigateToLogin,
                         child: Container(
-                          child: Text(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: const Text(
                             " Log in",
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          padding: EdgeInsets.symmetric(vertical: 8),
                         ),
                       ),
                     ],

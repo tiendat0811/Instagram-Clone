@@ -1,10 +1,7 @@
-import 'dart:collection';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/screens/profile_screen.dart';
-
-import '../utils/colors.dart';
+import '/screens/profile_screen.dart';
+import 'detail_post_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -23,7 +20,9 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Form(
           child: TextFormField(
             controller: searchController,
@@ -92,12 +91,14 @@ class _SearchScreenState extends State<SearchScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
+                                        nextUser['username'] != null
+                                    ?Text(
                                           nextUser['username'],
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 24),
-                                        ),
+                                        )
+                                        : Center(child: CircularProgressIndicator(),)
                                       ],
                                     ),
                                   )),
@@ -132,9 +133,16 @@ class _SearchScreenState extends State<SearchScreen> {
                         final post = Container(
                           padding: const EdgeInsets.all(2),
                           child: nextPost['postImage'] != null
-                              ? Image(
-                                  image: NetworkImage(nextPost['postImage']),
-                                  fit: BoxFit.cover,
+                              ? InkWell(
+                                  onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (context) => DetailPostScreen(
+                                            postId: key)),
+                                  ),
+                                  child: Image(
+                                    image: NetworkImage(nextPost['postImage']),
+                                    fit: BoxFit.cover,
+                                  ),
                                 )
                               : CircularProgressIndicator(),
                         );

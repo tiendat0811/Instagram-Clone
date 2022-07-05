@@ -3,12 +3,16 @@ import 'dart:collection';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/screens/inbox_screen.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '/screens/follows_screen.dart';
+import '/screens/inbox_screen.dart';
 
-import '../utils/colors.dart';
 import '../widgets/follow_button.dart';
+import 'detail_post_screen.dart';
 import 'login_screen.dart';
 import 'setting_screen.dart';
+
 class ProfileScreen extends StatefulWidget {
   final String uid;
 
@@ -19,12 +23,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _uidCur= FirebaseAuth.instance.currentUser!.uid;
+  final _uidCur = FirebaseAuth.instance.currentUser!.uid;
   var userData = {};
   var curUserData = {};
   int postLen = 0;
   int followers = 0;
-  int following = 0;
+  int followings = 0;
   bool isFollowing = false;
   bool isLoading = false;
   late PageController pageController;
@@ -44,40 +48,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final ref = FirebaseDatabase.instance.ref();
       final snapshot = await ref.child('users').child(widget.uid).get();
       final data =
-      Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
-      if (data.isNotEmpty) {
-        userData = data;
+          Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+
+      userData = data;
+
+      //get following
+      if (userData['followings'] != null) {
+        var followingData = Map<String, dynamic>.from(
+            userData['followings'] as Map<dynamic, dynamic>);
+        followings = followingData.length;
+      } else {
+        followings = 0;
+      }
+
+      //get followers
+      if (userData['followers'] != null) {
+        var followerData = Map<String, dynamic>.from(
+            userData['followers'] as Map<dynamic, dynamic>);
+        followers = followerData.length;
+        if (followerData.containsKey(_uidCur)) {
+          isFollowing = true;
+        }
+      } else {
+        followers = 0;
       }
 
       final snapshotCur = await ref.child('users').child(_uidCur).get();
       final dataCur =
-      Map<String, dynamic>.from(snapshotCur.value as Map<dynamic, dynamic>);
+          Map<String, dynamic>.from(snapshotCur.value as Map<dynamic, dynamic>);
       if (data.isNotEmpty) {
         curUserData = dataCur;
       }
-      //get followers
-      final followerSnapshot =
-      await ref.child('follow').child('followers').child(widget.uid).get();
-      if (followerSnapshot.exists) {
-        final followerData = Map<String, dynamic>.from(
-            followerSnapshot.value as Map<dynamic, dynamic>);
-        if (followerData.isNotEmpty) {
-          //check following
-          isFollowing = followerData.containsKey(_uidCur);
-          followers = followerData.length;
-        }
-      }
-      //get following
-      final followingSnapshot = await ref.child('follow').child('followings').child(widget.uid).get();
-      if (followingSnapshot.exists) {
-        final followingData = Map<String, dynamic>.from(
-            followingSnapshot.value as Map<dynamic, dynamic>);
-        if (followingData.isNotEmpty) {
-          //check following
-          following = followingData.length;
-        }
-      }
-      
+
       final postSnapshot = await ref
           .child("posts")
           .orderByChild("uid")
@@ -90,279 +92,421 @@ class _ProfileScreenState extends State<ProfileScreen> {
           postLen = listPost.length;
         }
       }
-      setState(() {});
+      setState(() {
+        isLoading = false;
+      });
     } catch (e) {
-      print("");
+      print(e.toString());
+      setState(() {
+        isLoading = false;
+      });
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return isLoading
         ? const Center(
-      child: CircularProgressIndicator(),
-    )
+            child: CircularProgressIndicator(),
+          )
         : Scaffold(
-      appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
-        title: Text(
-          userData['username'],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.settings,
-              color: primaryColor,
+            appBar: AppBar(
+              iconTheme: IconThemeData(
+                color: Theme.of(context).primaryColor,
+              ),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              title: Text(
+                userData['username'],
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor
+                ),
+              ),
+              actions: [
+                widget.uid == _uidCur
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.settings,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        // Ntluan - open
+                        onPressed: () {
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingScreen(),
+                                ),
+                              )
+                              .whenComplete(() => getData());
+                        },
+                        // Ntluan - close
+                      )
+                    : const Text("")
+              ],
+              centerTitle: false,
             ),
-            // Ntluan - open
-              onPressed: (){
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => SettingScreen(),
-                  ),
-                ).whenComplete(() => getData());
-              },
-            // Ntluan - close
-          ),
-        ],
-        centerTitle: false,
-      ),
-      body: ListView(
-        shrinkWrap: true,
-        children: [
-          Padding(padding: const EdgeInsets.all(16),
-            child: Column(
+            body: ListView(
+              shrinkWrap: true,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey,
-                      backgroundImage: NetworkImage(
-                        userData['photoUrl'],
-                      ),
-                      radius: 40,
-                    ),
-                    Expanded(
-                        flex: 1,
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceEvenly,
-                              children: [
-                                buildStatColumn(postLen, "posts"),
-                                buildStatColumn(followers, "followers"),
-                                buildStatColumn(following, "following"),
-                              ],
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.grey,
+                            backgroundImage: NetworkImage(
+                              userData['photoUrl'],
                             ),
-                            Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceEvenly,
-                              children: [
-                                FirebaseAuth.instance.currentUser!.uid ==
-                                    widget.uid
-                                    ? FollowButton(
-                                  text: 'Sign Out',
-                                  backgroundColor:
-                                  mobileBackgroundColor,
-                                  textColor: primaryColor,
-                                  borderColor: Colors.grey,
-                                  function: () async {
-                                    await FirebaseAuth.instance.signOut();
-                                    Navigator.of(context)
-                                        .pushReplacement(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                        const LoginScreen(),
+                            radius: 40,
+                          ),
+                          Expanded(
+                              flex: 1,
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      buildStatColumn(postLen, "posts"),
+                                      InkWell(
+                                        onTap: () {
+                                          Navigator.of(context)
+                                              .push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      FollowsScreen(
+                                                          uid: widget.uid,
+                                                          target: "followers"),
+                                                ),
+                                              )
+                                              .whenComplete(() => getData());
+                                        },
+                                        child: buildStatColumn(
+                                            followers, "followers"),
                                       ),
-                                    );
-                                  },
-                                )
-                                    : isFollowing
-                                    ? FollowButton(
-                                  text: 'Unfollow',
-                                  backgroundColor: Colors.white,
-                                  textColor: Colors.black,
-                                  borderColor: Colors.grey,
-                                  function: () async {
-                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child('${widget.uid}');
-                                    final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
-
-                                    refFollower.child(_uidCur).update({
-                                      'follow': false
-                                    });
-
-                                    refFollowing.child(widget.uid).update({
-                                      'follow': false
-                                    });
-
-                                    setState(() {
-                                      isFollowing = false;
-                                      followers--;
-                                    });
-                                  },
-                                  functionChat: ()  {
-                                    Navigator.of(context)
-                                        .push(
-                                      MaterialPageRoute(
-                                        builder: (context) => InboxScreen(sender: _uidCur, receiver: widget.uid),
+                                      InkWell(
+                                        onTap: () {
+                                          Navigator.of(context)
+                                              .push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      FollowsScreen(
+                                                          uid: widget.uid,
+                                                          target: "followings"),
+                                                ),
+                                              )
+                                              .whenComplete(() => getData());
+                                        },
+                                        child: buildStatColumn(
+                                            followings, "following"),
                                       ),
-                                    );
-                                  },
-                                )
-                                    : FollowButton(
-                                  text: 'Follow',
-                                  backgroundColor: Colors.blue,
-                                  textColor: Colors.white,
-                                  borderColor: Colors.blue,
-                                  function: () async {
-                                    final refFollower = await FirebaseDatabase.instance.ref("follow").child("followers").child(widget.uid);
-                                    final refFollowing = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur);
+                                    ],
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      FirebaseAuth.instance.currentUser!.uid ==
+                                              widget.uid
+                                          ? FollowButton(
+                                              text: 'Sign Out',
+                                              backgroundColor: Theme.of(context)
+                                                  .scaffoldBackgroundColor,
+                                              textColor: Theme.of(context)
+                                                  .primaryColor,
+                                              borderColor: Colors.grey,
+                                              function: () async {
+                                                //logout google
+                                                await GoogleSignIn().signOut();
 
-                                    //create chat
-                                    String keyChat = "";
-                                    String lastMess = "Say hi with ";
-                                    int datePublished = DateTime.now().millisecondsSinceEpoch;
-                                    final isHasKey = await FirebaseDatabase.instance.ref("follow").child("followings").child(_uidCur).child(widget.uid).get();
-                                    final isHasKey2 = await FirebaseDatabase.instance.ref("follow").child("followings").child(widget.uid).child(_uidCur).get();
-                                    if(isHasKey.exists || isHasKey2.exists){
-                                      final checkKey;
-                                      if(isHasKey.exists){
-                                        checkKey = Map<String, dynamic>.from(isHasKey.value as Map<dynamic, dynamic>);
-                                      }else{
-                                        checkKey = Map<String, dynamic>.from(isHasKey2.value as Map<dynamic, dynamic>);
-                                      }
-                                      keyChat = checkKey['chatHistory'];
-                                      lastMess = checkKey['lastMess'];
-                                      datePublished = checkKey['datePublished'];
-                                    }else{
-                                     keyChat = await FirebaseDatabase.instance.ref().child('chats').push().key.toString();
-                                    }
+                                                await FirebaseAuth.instance
+                                                    .signOut();
+                                                if (!mounted) return;
+                                                Navigator.of(context).pushReplacement(
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        LoginScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : isFollowing
+                                              ? FollowButton(
+                                                  text: 'Unfollow',
+                                                  backgroundColor: Theme.of(
+                                                          context)
+                                                      .scaffoldBackgroundColor,
+                                                  textColor: Theme.of(context)
+                                                      .primaryColor,
+                                                  borderColor: Colors.grey,
+                                                  function: () async {
+                                                    final targetUser =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(widget.uid)
+                                                            .child("followers");
+                                                    final currentUser =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(_uidCur)
+                                                            .child(
+                                                                "followings");
 
-                                    refFollower.child(_uidCur).update({
-                                      'follow' : true,
-                                      'chatHistory': keyChat
-                                    });
-                                    if(lastMess == "Say hi with "){
-                                      lastMess = lastMess + "${userData['username']}";
-                                    }
-                                    refFollowing.child(widget.uid).update({
-                                      'follow' : true,
-                                      'chatHistory': keyChat,
-                                      'photoUrl' : userData['photoUrl'],
-                                      'username': userData['username'],
-                                      'lastMess': lastMess,
-                                      'datePublished' : datePublished
-                                    });
-                                    if(lastMess == "Say hi with ${userData['username']}"){
-                                      lastMess = "Say hi with ${curUserData['username']}";
-                                    }
-                                    FirebaseDatabase.instance.ref("follow").child("followings").child(widget.uid).child(_uidCur).update({
-                                      'follow' : false,
-                                      'chatHistory': keyChat,
-                                      'photoUrl' : curUserData['photoUrl'],
-                                      'username': curUserData['username'],
-                                      'lastMess': lastMess,
-                                      'datePublished' : datePublished
-                                    });
+                                                    targetUser
+                                                        .child(_uidCur)
+                                                        .remove();
 
+                                                    currentUser
+                                                        .child(widget.uid)
+                                                        .remove();
 
-                                    setState(() {
-                                      isFollowing = true;
-                                      followers++;
-                                    });
+                                                    setState(() {
+                                                      isFollowing = false;
+                                                      followers--;
+                                                    });
+                                                  },
+                                                  functionChat: () {
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            InboxScreen(
+                                                                sender: _uidCur,
+                                                                receiver:
+                                                                    widget.uid),
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              : FollowButton(
+                                                  text: 'Follow',
+                                                  backgroundColor: Colors.blue,
+                                                  textColor: Colors.white,
+                                                  borderColor: Colors.blue,
+                                                  function: () async {
+                                                    final targetUser =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(widget.uid)
+                                                            .child("followers");
 
-                                    //notifications
-                                    final snapshot = await FirebaseDatabase.instance.ref().child('users').child(_uidCur).get();
-                                    final data =
-                                    Map<String, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
-                                    final notifications = await FirebaseDatabase.instance.ref("notifications").child('${widget.uid}');
-                                    notifications.push().set({
-                                        'username': data['username'],
-                                        'userImg': data['photoUrl'],
-                                        'text' : "started following you",
-                                        'datePublished' : DateTime.now().millisecondsSinceEpoch
-                                    });
-                                  },
-                                )
-                              ],
+                                                    final currentUser =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(_uidCur)
+                                                            .child(
+                                                                "followings");
+
+                                                    targetUser
+                                                        .child(_uidCur)
+                                                        .update({
+                                                      'follow': true,
+                                                    });
+
+                                                    currentUser
+                                                        .child(widget.uid)
+                                                        .update({
+                                                      'follow': true,
+                                                    });
+
+                                                    //first hello message
+                                                    Map<String, dynamic>
+                                                        chatInfo = {
+                                                      'text':
+                                                          "Hello i'm ${curUserData['username']}",
+                                                      'sender': _uidCur,
+                                                      'receiver': widget.uid,
+                                                      'datePublished': DateTime
+                                                              .now()
+                                                          .millisecondsSinceEpoch,
+                                                    };
+                                                    DatabaseReference
+                                                        refSender =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child('${_uidCur}')
+                                                            .child('chats')
+                                                            .child(
+                                                                '${widget.uid}');
+                                                    await refSender.update({
+                                                      "lastTime": DateTime.now()
+                                                          .millisecondsSinceEpoch
+                                                    });
+                                                    final messId =
+                                                        await refSender
+                                                            .push()
+                                                            .key;
+                                                    refSender
+                                                        .child(messId!)
+                                                        .set(chatInfo);
+
+                                                    DatabaseReference
+                                                        refReceiver =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(
+                                                                '${widget.uid}')
+                                                            .child('chats')
+                                                            .child(
+                                                                '${_uidCur}');
+                                                    await refReceiver.update({
+                                                      "lastTime": DateTime.now()
+                                                          .millisecondsSinceEpoch
+                                                    });
+                                                    refReceiver
+                                                        .child(messId)
+                                                        .set(chatInfo);
+
+                                                    //send notifications
+                                                    final notifications =
+                                                        await FirebaseDatabase
+                                                            .instance
+                                                            .ref("users")
+                                                            .child(widget.uid)
+                                                            .child(
+                                                                "notifications");
+                                                    notifications.push().set({
+                                                      'uid': _uidCur,
+                                                      'text':
+                                                          "started following you",
+                                                      'datePublished': DateTime
+                                                              .now()
+                                                          .millisecondsSinceEpoch
+                                                    });
+
+                                                    //count++ unseen notifications
+                                                    int unseenNotificationCount =
+                                                        0;
+                                                    if (userData[
+                                                            'unseenNotificationCount'] !=
+                                                        null) {
+                                                      unseenNotificationCount =
+                                                          userData[
+                                                              'unseenNotificationCount'];
+                                                    }
+                                                    await FirebaseDatabase
+                                                        .instance
+                                                        .ref("users")
+                                                        .child(widget.uid)
+                                                        .update({
+                                                      "unseenNotificationCount":
+                                                          unseenNotificationCount +
+                                                              1
+                                                    });
+
+                                                    setState(() {
+                                                      isFollowing = true;
+                                                      followers++;
+                                                      getData();
+                                                    });
+                                                  },
+                                                )
+                                    ],
+                                  )
+                                ],
+                              ))
+                        ],
+                      ),
+                      Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(
+                          top: 15,
+                        ),
+                        child: Text(
+                          userData['fullname'],
+                          style: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width*0.045,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(
+                          top: 1,
+                        ),
+                        child: Text(
+                          userData['bio'],
+                          style: TextStyle(fontSize: MediaQuery.of(context).size.width*0.04,),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                StreamBuilder(
+                    stream: FirebaseDatabase.instance
+                        .ref()
+                        .child("posts")
+                        .orderByChild("uid")
+                        .equalTo('${widget.uid}')
+                        .onValue,
+                    builder: (context, snapshot) {
+                      final tileList = <Widget>[];
+                      if (snapshot.hasData) {
+                        DatabaseEvent dataValues =
+                            snapshot.data! as DatabaseEvent;
+                        if (dataValues.snapshot.exists) {
+                          final myPosts = Map<String, dynamic>.from(dataValues
+                              .snapshot.value as Map<dynamic, dynamic>);
+                          if (myPosts.isNotEmpty) {
+                            var sortByValue =
+                                new SplayTreeMap<String, dynamic>.from(
+                                    myPosts,
+                                    (key2, key1) => myPosts[key1]
+                                            ['datePublished']
+                                        .compareTo(
+                                            myPosts[key2]['datePublished']));
+                            sortByValue.forEach((key, value) {
+                              final nextPost = Map<String, dynamic>.from(value);
+                              final post = Container(
+                                padding: const EdgeInsets.all(2),
+                                child: nextPost['postImage'] != null
+                                    ? InkWell(
+                                        onTap: () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  DetailPostScreen(
+                                                      postId: key)),
+                                        ),
+                                        child: Image(
+                                          image: NetworkImage(
+                                              nextPost['postImage']),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : const CircularProgressIndicator(),
+                              );
+                              tileList.add(post);
+                            });
+                          }
+                          return Container(
+                            decoration: BoxDecoration(
+                                border: Border(top: BorderSide(width: 2.0,color: Theme.of(context).primaryColor))
+                            ),
+                            child: GridView.count(
+                              shrinkWrap: true,
+                              physics: const ScrollPhysics(),
+                              padding: const EdgeInsets.all(5),
+                              mainAxisSpacing: 2,
+                              crossAxisSpacing: 2,
+                              crossAxisCount: 3,
+                              children: tileList,
                             )
-                          ],
-                        )
-                    )
-                  ],
-                ),
-                Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(
-                    top: 15,
-                  ),
-                  child: Text(
-                    userData['username'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(
-                    top: 1,
-                  ),
-                  child: Text(
-                    userData['bio'],
-                  ),
-                ),
+                          );
+                        }
+                      }
+                      return const Text("");
+                    }),
               ],
             ),
-          ),
-          StreamBuilder(
-              stream:FirebaseDatabase.instance.ref().child("posts")
-        .orderByChild("uid")
-        .equalTo('${widget.uid}').onValue,
-              builder: (context, snapshot) {
-                final tileList = <Widget>[];
-                if (snapshot.hasData) {
-                  DatabaseEvent dataValues = snapshot.data! as DatabaseEvent;
-                  if (dataValues.snapshot.exists) {
-                    final myPosts = Map<String, dynamic>.from(
-                        dataValues.snapshot.value as Map<dynamic, dynamic>);
-                    if (myPosts.isNotEmpty) {
-                      var sortByValue = new SplayTreeMap<String, dynamic>.from(
-                          myPosts,
-                              (key2, key1) => myPosts[key1]['datePublished']
-                              .compareTo(myPosts[key2]['datePublished']));
-                      sortByValue.forEach((key, value) {
-                        final nextPost = Map<String, dynamic>.from(value);
-                        final post = Container(
-                          padding: const EdgeInsets.all(2),
-                          child: nextPost['postImage'] != null
-                              ? Image(image: NetworkImage(nextPost['postImage']),fit: BoxFit.cover,)
-                              : CircularProgressIndicator(),
-                        );
-                        tileList.add(post);
-                      });
-                    }
-                    return GridView.count(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.all(5),
-                      mainAxisSpacing: 2,
-                      crossAxisSpacing: 2,
-                      crossAxisCount: 3,
-                      children: tileList,
-                    );
-                  }
-                }
-                return Text("");
-              }
-          ),
-        ],
-      ),
-    );
+          );
   }
 
   Column buildStatColumn(int num, String label) {

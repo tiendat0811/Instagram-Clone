@@ -7,7 +7,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jiffy/jiffy.dart';
 
-import '../utils/colors.dart';
 import 'inbox_screen.dart';
 
 class ChatsScreen extends StatefulWidget {
@@ -28,40 +27,66 @@ class _ChatsScreenState extends State<ChatsScreen> {
       print(e.toString());
     }
   }
+  void getData() async{
+    await FirebaseDatabase.instance
+        .ref("users")
+        .child(_uid)
+        .update({"unseenMessageCount": 0});
+  }
+  @override
+  void initState(){
+    super.initState();
+
+    getData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: mobileBackgroundColor,
-          title: const Text(
+          iconTheme: IconThemeData(
+            color: Theme.of(context).primaryColor,
+          ),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          title: Text(
             'Chats',
+            style: TextStyle(
+                color: Theme.of(context).primaryColor
+            ),
           ),
           centerTitle: false,
         ),
         body: StreamBuilder(
           stream: FirebaseDatabase.instance
-              .ref('follow')
-              .child('followings')
-              .child(_uid)
+              .ref('users')
               .onValue,
           builder: (context, snapshot) {
             final chatList = <ListTile>[];
             if (snapshot.hasData) {
-              DatabaseEvent chats = snapshot.data! as DatabaseEvent;
-              if (chats.snapshot.exists) {
-                final commentsData = Map<String, dynamic>.from(
-                    chats.snapshot.value as Map<dynamic, dynamic>);
-                var sortByValue = new SplayTreeMap<String, dynamic>.from(
-                    commentsData,
-                        (key1, key2) => commentsData[key1]['datePublished']
-                        .compareTo(commentsData[key2]['datePublished']));
-                sortByValue.forEach((key, value) {
-                  final nextMess = Map<String, dynamic>.from(value);
-                  if(nextMess['chatHistory'] != null){
+              DatabaseEvent users = snapshot.data! as DatabaseEvent;
+              if (users.snapshot.exists) {
+                final usersData = Map<String, dynamic>.from(
+                    users.snapshot.value as Map<dynamic, dynamic>);
+                var chatsData = usersData[_uid]['chats'];
+                if(chatsData!= null){
+                  var sortChats = SplayTreeMap<String, dynamic>.from(
+                      chatsData,
+                          (key1, key2) => chatsData[key1]['lastTime']
+                          .compareTo(chatsData[key2]['lastTime']));
+
+                  sortChats.forEach((key, value) {
+                    final nextMess = Map<String, dynamic>.from(value);
+                    //sort by time
+                    nextMess.removeWhere((key, value) => key == "lastTime");
+                    var sortMessage = SplayTreeMap<String, dynamic>.from(
+                        nextMess,
+                            (key2, key1) => nextMess[key1]['datePublished']
+                            .compareTo(nextMess[key2]['datePublished']));
+
+                    final idLastMess = sortMessage.keys.toList().first;
                     final messTile = ListTile(
                         contentPadding: EdgeInsets.symmetric(
                             vertical: 20 * 0.75, horizontal: 20),
-
                         title: InkWell(
                           onLongPress: (){
                             showDialog(
@@ -111,8 +136,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                           child: Row(
                             children: [
                               CircleAvatar(
-                                radius: 24,
-                                backgroundImage: NetworkImage(nextMess['photoUrl']),
+                                radius: MediaQuery.of(context).size.width*0.06,
+                                backgroundImage: NetworkImage(usersData[key]['photoUrl']),
                               ),
                               Expanded(
                                 child: Padding(
@@ -121,10 +146,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          nextMess['username'],
+                                          usersData[key]['username'],
                                           style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500),
+                                              fontSize: MediaQuery.of(context).size.width*0.04,
+                                              fontWeight: FontWeight.bold),
                                         ),
                                         SizedBox(
                                           height: 5,
@@ -132,9 +157,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                         Opacity(
                                           opacity: 0.65,
                                           child: Text(
-                                            nextMess['lastMess'],
+                                            nextMess[idLastMess]['text'],
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width*0.04,
+                                            ),
                                           ),
                                         )
                                       ],
@@ -143,12 +171,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
                               Text(
                                 Jiffy(DateTime
                                     .fromMillisecondsSinceEpoch(
-                                    nextMess['datePublished']))
+                                    nextMess[idLastMess]['datePublished']))
                                     .fromNow(),
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Colors.grey,
                                   fontWeight: FontWeight.w500,
-                                  fontSize: 12,
+                                  fontSize: MediaQuery.of(context).size.width*0.03,
                                 ),
                               ),
                             ],
@@ -156,8 +184,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         )
                     );
                     chatList.add(messTile);
-                  }
-                });
+                  });
+                }else{
+                  chatList.add(ListTile(title: Text("You don't have any message yet"),));
+                }
+
               }
             }
             return ListView(

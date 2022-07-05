@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../resources/storage_methods.dart';
-import '../utils/colors.dart';
 import '../utils/utils.dart';
 import '../widgets/text_field_input.dart';
 
@@ -23,6 +22,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _fullnameController = TextEditingController();
   Uint8List? _image;
   bool _isLoading = false;
 
@@ -66,48 +66,39 @@ class _SettingScreenState extends State<SettingScreen> {
       _isLoading = true;
     });
     try {
-      String res = "ERROR";
       String username = _usernameController.text;
       String bio = _bioController.text;
+      String fullname = _fullnameController.text;
+      if(username == '' ){
+        username = userData['username'];
+      }
+      if(bio == ''){
+        bio = userData['bio'];
+      }
+      if(fullname == ''){
+        fullname = userData['fullname'];
+      }
       DatabaseReference ref = FirebaseDatabase.instance.ref("users/$_uid");
       if (_image != null) {
         String avatarUrl = await StorageMethods()
             .uploadImageToStorage('avatars', _image!, false, "");
-        if(username == ''){
-          ref.update({
-            'photoUrl': avatarUrl,
-            'bio': bio,
-          });
-        }else if(bio == ''){
-          ref.update({
-            'username': username,
-            'photoUrl': avatarUrl,
-          });
-        }else{
           ref.update({
             'username': username,
             'photoUrl': avatarUrl,
             'bio': bio,
+            'fullname': fullname
           });
-        }
-
       } else {
-        if(username == ''){
-          ref.update({
-            'bio': bio,
-          });
-        }else if(bio == ''){
-          ref.update({
-            'username': username,
-          });
-        }else{
           ref.update({
             'username': username,
             'bio': bio,
+            'fullname': fullname
           });
-        }
-        showSnackBar("Edit information success!!!", context);
       }
+      showSnackBar("Edit information success!!!", context);
+      _fullnameController.text = "";
+      _bioController.text = "";
+      _usernameController.text = "";
     } catch (e) {
       print(e.toString());
     }
@@ -122,26 +113,33 @@ class _SettingScreenState extends State<SettingScreen> {
     super.dispose();
     _bioController.dispose();
     _usernameController.dispose();
+    _fullnameController.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return _isLoading
-        ? Center(
-            child: CircularProgressIndicator(),
+        ? const Center(
+            child: const CircularProgressIndicator(),
           )
         : Scaffold(
             appBar: AppBar(
-              backgroundColor: mobileBackgroundColor,
-              title: const Text(
+              iconTheme: IconThemeData(
+                color: Theme.of(context).primaryColor,
+              ),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              title: Text(
                 'Edit profile',
+                style: TextStyle(
+                    color: Theme.of(context).primaryColor
+                ),
               ),
               centerTitle: false,
             ),
             body: Center(
               child: ListView(
                 shrinkWrap: true,
-                padding: EdgeInsets.all(30),
+                padding: const EdgeInsets.all(30),
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -162,58 +160,72 @@ class _SettingScreenState extends State<SettingScreen> {
                             bottom: -10,
                             left: 70,
                             child: IconButton(
-                                icon: Icon(Icons.add_a_photo),
+                                icon: const Icon(Icons.add_a_photo),
                                 onPressed: selectImage),
                           )
                         ],
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 44,
                       ),
                       //username
                       TextFieldInput(
-                          textEditingController: _usernameController,
-                          hintText: userData['username'],
-                          textInputType: TextInputType.text),
+                        textEditingController: _usernameController,
+                        hintText: userData['username'],
+                        textInputType: TextInputType.text,
+                        label: "Username",
+                      ),
                       //password
-                      SizedBox(
+                      const SizedBox(
                         height: 24,
                       ),
-
+                      //fullname
+                      TextFieldInput(
+                        textEditingController: _fullnameController,
+                        hintText: userData['fullname'],
+                        textInputType: TextInputType.text,
+                        label: "Fullname",
+                      ),
+                      //password
+                      const SizedBox(
+                        height: 24,
+                      ),
                       //bio
                       TextFieldInput(
-                          textEditingController: _bioController,
-                          hintText: userData['bio'],
-                          textInputType: TextInputType.text),
+                        textEditingController: _bioController,
+                        hintText: userData['bio'],
+                        textInputType: TextInputType.text,
+                        label: "Your bio",
+                      ),
                       //password
-                      SizedBox(
+                      const SizedBox(
                         height: 34,
                       ),
                       InkWell(
                         onTap: updateUserInfo,
                         child: Container(
                           child: _isLoading
-                              ? Center(
-                                  child: CircularProgressIndicator(
-                                    color: primaryColor,
+                              ? const Center(
+                                  child: const CircularProgressIndicator(
+                                    color: Colors.blue,
                                   ),
                                 )
-                              : Text("Confirm",
+                              : const Text("Confirm",
                                   style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                      const TextStyle(fontWeight: FontWeight.bold)),
                           width: double.infinity,
                           alignment: Alignment.center,
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          decoration: ShapeDecoration(
-                            shape: RoundedRectangleBorder(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: const ShapeDecoration(
+                            shape: const RoundedRectangleBorder(
                               borderRadius:
-                                  BorderRadius.all(Radius.circular(4)),
+                                  BorderRadius.all(const Radius.circular(4)),
                             ),
-                            color: blueColor,
+                            color: Colors.blue,
                           ),
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 12,
                       ),
                     ],

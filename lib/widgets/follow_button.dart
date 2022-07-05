@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/utils/colors.dart';
 
 class FollowButton extends StatelessWidget {
   final Function()? function;
@@ -33,7 +32,7 @@ class FollowButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: backgroundColor,
                 border: Border.all(
-                  color: borderColor,
+                  color: Theme.of(context).primaryColor,
                 ),
                 borderRadius: BorderRadius.circular(5),
               ),
@@ -48,7 +47,7 @@ class FollowButton extends StatelessWidget {
             ),
           ),
         ),
-        if(text != "Sign Out" && text != "Follow")
+        if(text != "Sign Out" && text != "Follow"  && text != " Following " && text != "Delete")
         Container(
           padding: const EdgeInsets.only(top: 2),
           child: TextButton(
@@ -57,9 +56,9 @@ class FollowButton extends StatelessWidget {
               height: 30,
               width: MediaQuery.of(context).size.height * 0.15,
               decoration: BoxDecoration(
-                color: mobileBackgroundColor,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 border: Border.all(
-                  color: Colors.white,
+                  color: Theme.of(context).primaryColor,
                 ),
                 borderRadius: BorderRadius.circular(5),
               ),
@@ -67,7 +66,7 @@ class FollowButton extends StatelessWidget {
               child: Text(
                 "Chat",
                 style: TextStyle(
-                  color: Colors.white,
+                  color:Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),

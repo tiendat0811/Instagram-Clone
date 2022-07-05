@@ -1,13 +1,13 @@
+import 'package:badges/badges.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/screens/add_post_screen.dart';
-import 'package:instagram_clone/screens/feed_screen.dart';
-import 'package:instagram_clone/screens/notifications_screen.dart';
-import 'package:instagram_clone/screens/profile_screen.dart';
-import 'package:instagram_clone/screens/search_screen.dart';
-import 'package:instagram_clone/utils/colors.dart';
+import '/screens/add_post_screen.dart';
+import '/screens/feed_screen.dart';
+import '/screens/notifications_screen.dart';
+import '/screens/profile_screen.dart';
+import '/screens/search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _page = 0;
   late PageController pageController;
 
-
   @override
   void initState() {
     super.initState();
@@ -35,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     pageController.dispose();
   }
 
-  void NavigationTapped(int page){
+  void NavigationTapped(int page) {
     pageController.jumpToPage(page);
   }
 
@@ -49,49 +48,91 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        body: PageView(
-          physics: NeverScrollableScrollPhysics(),
-          children: <Widget>[
-            FeedScreen(),
-            SearchScreen(),
-            AddPostScreen(),
-            NotificationsScreen(),
-            ProfileScreen(uid:'$_uid'),
-          ],
-          controller: pageController,
-          onPageChanged: onPageChanged,
-        ),
-        bottomNavigationBar: CupertinoTabBar(
-          backgroundColor: mobileBackgroundColor,
-          items: [
-            BottomNavigationBarItem(
-              icon: _page==0 ? Icon(Icons.home, color: primaryColor,): Icon(Icons.home_outlined, color: primaryColor),
-              label: '',
+          body: PageView(
+            physics: const NeverScrollableScrollPhysics(),
+            controller: pageController,
+            onPageChanged: onPageChanged,
+            children: <Widget>[
+              const FeedScreen(),
+              const SearchScreen(),
+              const AddPostScreen(),
+              const NotificationsScreen(),
+              ProfileScreen(uid: _uid),
+            ],
+          ),
+          bottomNavigationBar: Padding(
+            padding: EdgeInsets.all(5),
+            child: StreamBuilder(
+                stream: FirebaseDatabase.instance.ref("users").child(_uid).onValue,
+                builder: (context, snapshot) {
+                  int unseenNotificationCount = 0;
+                  if (snapshot.hasData) {
+                    DatabaseEvent dataValues = snapshot.data! as DatabaseEvent;
+                    if (dataValues.snapshot.exists) {
+                      final snapshotData = Map<String, dynamic>.from(
+                          dataValues.snapshot.value as Map<dynamic, dynamic>);
 
-            ),
-            BottomNavigationBarItem(
-              icon: _page==1 ? Icon(CupertinoIcons.search, color: primaryColor,):Icon(Icons.search, color: primaryColor),
-              label: '',
-              backgroundColor: primaryColor,
-            ),
-            BottomNavigationBarItem(
-              icon: _page==2 ? Icon(Icons.add_circle, color: primaryColor) : Icon(Icons.add_circle_outline, color: primaryColor),
-              label: '',
-              backgroundColor: primaryColor,
-            ),
-            BottomNavigationBarItem(
-              icon: _page==3 ? Icon(Icons.favorite, color: primaryColor) : Icon(Icons.favorite_outline, color: primaryColor),
-              label: '',
-              backgroundColor: primaryColor,
-            ),
-            BottomNavigationBarItem(
-              icon: _page==4 ? Icon(Icons.person, color: primaryColor) : Icon(Icons.person_outline, color: primaryColor),
-              label: '',
-              backgroundColor: primaryColor,
-            ),
-          ],
-          onTap: NavigationTapped,
-        ),
+                      if (snapshotData['unseenNotificationCount'] != null) {
+                        unseenNotificationCount = snapshotData['unseenNotificationCount'];
+                      }
+                    }
+                  }
+                  return CupertinoTabBar(
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    items: [
+                      BottomNavigationBarItem(
+                        icon: _page == 0
+                            ?  Icon(
+                          Icons.home,
+                          color: Theme.of(context).primaryColor,
+                        )
+                            :  Icon(Icons.home_outlined,
+                            color: Theme.of(context).primaryColor),
+                        label: '',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: _page == 1
+                            ?  Icon(
+                          CupertinoIcons.search,
+                          color: Theme.of(context).primaryColor,
+                        )
+                            :  Icon(Icons.search, color: Theme.of(context).primaryColor),
+                        label: '',
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                      ),
+                      BottomNavigationBarItem(
+                        icon: _page == 2
+                            ?  Icon(Icons.add_circle, color: Theme.of(context).primaryColor)
+                            :  Icon(Icons.add_circle_outline,
+                            color: Theme.of(context).primaryColor),
+                        label: '',
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                      ),
+                      BottomNavigationBarItem(
+                        icon: _page == 3
+                            ?  Icon(Icons.favorite, color: Theme.of(context).primaryColor)
+                            : Badge(
+                            showBadge:
+                            unseenNotificationCount != 0 ? true : false,
+                            badgeContent: Text("$unseenNotificationCount"),
+                            child: Icon(Icons.favorite_outline,
+                                color: Theme.of(context).primaryColor)),
+                        label: '',
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                      ),
+                      BottomNavigationBarItem(
+                        icon: _page == 4
+                            ?  Icon(Icons.person, color: Theme.of(context).primaryColor)
+                            :  Icon(Icons.person_outline,
+                            color: Theme.of(context).primaryColor),
+                        label: '',
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                      ),
+                    ],
+                    onTap: NavigationTapped,
+                  );
+                })
+          )
       ),
     );
   }
